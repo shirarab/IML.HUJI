@@ -7,13 +7,14 @@ class UnivariateGaussian:
     """
     Class for univariate Gaussian Distribution Estimator
     """
+
     def __init__(self, biased_var: bool = False) -> UnivariateGaussian:
         """
         Estimator for univariate Gaussian mean and variance parameters
 
         Parameters
         ----------
-        biased_var : bool, default=True
+        biased_var : bool, default=False
             Should fitted estimator of variance be a biased or unbiased estimator
 
         Attributes
@@ -51,8 +52,17 @@ class UnivariateGaussian:
         Sets `self.mu_`, `self.var_` attributes according to calculated estimation (where
         estimator is either biased or unbiased). Then sets `self.fitted_` attribute to `True`
         """
-        raise NotImplementedError()
 
+        num_samples = X.size  # todo maybe X.shape[0]??
+        self.mu_ = np.mean(X)  # X.sum() / num_samples  # (Σx_i)/m
+        x_minus_mu_pow = np.power(X - self.mu_, 2)  # Σ(x_i-μ)^2
+        if not self.biased_:
+            # todo what happens if num_samples = 1?
+            self.var_ = x_minus_mu_pow.sum() / (num_samples - 1)  # (Σ(x_i-μ)^2)/(m-1)
+        else:
+            # todo what happens if num_samples = 0?
+            self.var_ = x_minus_mu_pow.sum() / num_samples  # (Σ(x_i-μ)^2)/m
+        # todo can self.var_ be 0? it can be problematic in pdf func
         self.fitted_ = True
         return self
 
@@ -76,7 +86,11 @@ class UnivariateGaussian:
         """
         if not self.fitted_:
             raise ValueError("Estimator must first be fitted before calling `pdf` function")
-        raise NotImplementedError()
+
+        denominator = np.sqrt(2 * np.pi * self.var_)  # √(2πσ^2)
+        exp = np.exp(-((X - self.mu_) ** 2) / (2 * self.var_))  # exp(-(x−μ)^2/2σ^2)
+        pdfs = exp / denominator  # exp(-(x−μ)^2/2σ^2)/√(2πσ^2)
+        return pdfs
 
     @staticmethod
     def log_likelihood(mu: float, sigma: float, X: np.ndarray) -> float:
@@ -97,13 +111,20 @@ class UnivariateGaussian:
         log_likelihood: float
             log-likelihood calculated
         """
-        raise NotImplementedError()
+
+        # todo can sigma be 0?
+        num_samples = X.size
+        log = np.log(2 * np.pi * sigma ** 2) * num_samples / 2
+        inside_exp = np.sum(((X - mu) ** 2) / (2 * sigma ** 2))
+        log_likelihood = -log - inside_exp
+        return log_likelihood
 
 
 class MultivariateGaussian:
     """
     Class for multivariate Gaussian Distribution Estimator
     """
+
     def __init__(self):
         """
         Initialize an instance of multivariate Gaussian estimator
@@ -143,7 +164,14 @@ class MultivariateGaussian:
         Sets `self.mu_`, `self.cov_` attributes according to calculated estimation.
         Then sets `self.fitted_` attribute to `True`
         """
-        raise NotImplementedError()
+        # raise NotImplementedError()
+
+        num_samples = X.shape[0]
+        self.mu_ = np.mean(X, axis=0)  # (... (Σx_i)/m ...)^T
+        # empirical_mean = np.tile(self.mu_, num_samples).reshape(num_samples, self.mu_.size)
+        X_centered = X - self.mu_
+        numerator = X_centered.T @ X_centered
+        self.cov_ = numerator / (num_samples - 1)
 
         self.fitted_ = True
         return self
@@ -168,7 +196,18 @@ class MultivariateGaussian:
         """
         if not self.fitted_:
             raise ValueError("Estimator must first be fitted before calling `pdf` function")
-        raise NotImplementedError()
+        # raise NotImplementedError()
+
+        # todo what happens if num_samples = 0?
+        num_samples = X.shape[0]
+        denominator = np.sqrt(np.power(2 * np.pi, num_samples) * np.linalg.det(self.cov_))  # √((2π)^d*|Σ|)
+        X_minus_mu = X - self.mu_
+        cov_inverse = np.linalg.inv(self.cov_)
+        # todo!!! wrong matrix dimension - if i change it then pdf == 0 :|
+        exp = np.exp(-0.5 * X_minus_mu @ cov_inverse @ X_minus_mu.T)  # exp(-0.5(x−μ)^T*Σ^-1*(x−μ))
+        # exp = np.exp(-0.5 * X_minus_mu.T @ cov_inverse @ X_minus_mu)  # exp(-0.5(x−μ)^T*Σ^-1*(x−μ))
+        pdfs = exp / denominator  # exp(-(x−μ)^2/2σ^2)/√((2π)^d*|Σ|)
+        return pdfs
 
     @staticmethod
     def log_likelihood(mu: np.ndarray, cov: np.ndarray, X: np.ndarray) -> float:
