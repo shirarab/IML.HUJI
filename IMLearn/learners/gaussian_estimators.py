@@ -53,15 +53,16 @@ class UnivariateGaussian:
         estimator is either biased or unbiased). Then sets `self.fitted_` attribute to `True`
         """
 
-        num_samples = X.size  # todo maybe X.shape[0]??
+        # num_samples = X.size  # todo maybe X.shape[0]??
         self.mu_ = np.mean(X)  # X.sum() / num_samples  # (Σx_i)/m
-        x_minus_mu_pow = np.power(X - self.mu_, 2)  # Σ(x_i-μ)^2
+        # x_minus_mu_pow = np.power(X - self.mu_, 2)  # Σ(x_i-μ)^2
+        # np.var(X, ddof=1)
         if not self.biased_:
             # todo what happens if num_samples = 1?
-            self.var_ = x_minus_mu_pow.sum() / (num_samples - 1)  # (Σ(x_i-μ)^2)/(m-1)
+            self.var_ = np.var(X, ddof=1)  # x_minus_mu_pow.sum() / (num_samples - 1)  # (Σ(x_i-μ)^2)/(m-1)
         else:
             # todo what happens if num_samples = 0?
-            self.var_ = x_minus_mu_pow.sum() / num_samples  # (Σ(x_i-μ)^2)/m
+            self.var_ = np.var(X, ddof=0)  # x_minus_mu_pow.sum() / num_samples  # (Σ(x_i-μ)^2)/m
         # todo can self.var_ be 0? it can be problematic in pdf func
         self.fitted_ = True
         return self
@@ -112,7 +113,7 @@ class UnivariateGaussian:
             log-likelihood calculated
         """
 
-        # todo can sigma be 0?
+        # todo can sigma be 0? sigma might be the var (like in the documentation) - check
         num_samples = X.size
         log = np.log(2 * np.pi * sigma ** 2) * num_samples / 2
         inside_exp = np.sum(((X - mu) ** 2) / (2 * sigma ** 2))
@@ -166,12 +167,13 @@ class MultivariateGaussian:
         """
         # raise NotImplementedError()
 
-        num_samples = X.shape[0]
+        # num_samples = X.shape[0]
         self.mu_ = np.mean(X, axis=0)  # (... (Σx_i)/m ...)^T
         # empirical_mean = np.tile(self.mu_, num_samples).reshape(num_samples, self.mu_.size)
-        X_centered = X - self.mu_
-        numerator = X_centered.T @ X_centered
-        self.cov_ = numerator / (num_samples - 1)
+        self.cov_ = np.cov(X.T, bias=False)
+        # X_centered = X - self.mu_
+        # numerator = X_centered.T @ X_centered
+        # self.cov_ = numerator / (num_samples - 1)
 
         self.fitted_ = True
         return self
@@ -198,16 +200,14 @@ class MultivariateGaussian:
             raise ValueError("Estimator must first be fitted before calling `pdf` function")
         # raise NotImplementedError()
 
-        # todo what happens if num_samples = 0?
-        num_samples = X.shape[0]
-        denominator = np.sqrt(np.power(2 * np.pi, num_samples) * np.linalg.det(self.cov_))  # √((2π)^d*|Σ|)
+        # todo what happens if num_samples = 0? and if det == 0?
+        denominator = np.sqrt(np.power(2 * np.pi, self.mu_.size) * det(self.cov_))  # √((2π)^d*|Σ|)
         X_minus_mu = X - self.mu_
-        cov_inverse = np.linalg.inv(self.cov_)
-        # todo!!! wrong matrix dimension - if i change it then pdf == 0 :|
-        exp = np.exp(-0.5 * X_minus_mu @ cov_inverse @ X_minus_mu.T)  # exp(-0.5(x−μ)^T*Σ^-1*(x−μ))
-        # exp = np.exp(-0.5 * X_minus_mu.T @ cov_inverse @ X_minus_mu)  # exp(-0.5(x−μ)^T*Σ^-1*(x−μ))
-        pdfs = exp / denominator  # exp(-(x−μ)^2/2σ^2)/√((2π)^d*|Σ|)
-        return pdfs
+        pdfs = []
+        for i in range(X.shape[0]):
+            exp = np.exp(-0.5 * X_minus_mu[i, :] @ inv(self.cov_) @ X_minus_mu[i, :])
+            pdfs.append(exp / denominator)
+        return np.array(pdfs)
 
     @staticmethod
     def log_likelihood(mu: np.ndarray, cov: np.ndarray, X: np.ndarray) -> float:
@@ -228,4 +228,17 @@ class MultivariateGaussian:
         log_likelihood: float
             log-likelihood calculated over all input data and under given parameters of Gaussian
         """
-        raise NotImplementedError()
+        # raise NotImplementedError()
+
+        m = X.shape[0]
+        d = mu.size
+        X_minus_mu = X - mu.T
+        first = np.log(2 * np.pi) * m * d / 2
+        sign, logdet = slogdet(cov)
+        second = sign * logdet * m / 2
+        thirds = []
+        for i in range(X.shape[0]):
+            thirds.append(-0.5 * X_minus_mu[i, :] @ inv(cov) @ X_minus_mu[i, :])
+        third = np.sum(np.array(thirds))
+        log_likelihood = - first - second + third
+        return log_likelihood
