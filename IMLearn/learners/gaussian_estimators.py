@@ -36,7 +36,7 @@ class UnivariateGaussian:
 
     def fit(self, X: np.ndarray) -> UnivariateGaussian:
         """
-        Estimate Gaussian expectation and variance from given samples
+        Estimate Gaussian expectation and variance from given samples (>1)
 
         Parameters
         ----------
@@ -53,17 +53,11 @@ class UnivariateGaussian:
         estimator is either biased or unbiased). Then sets `self.fitted_` attribute to `True`
         """
 
-        # num_samples = X.size  # todo maybe X.shape[0]??
-        self.mu_ = np.mean(X)  # X.sum() / num_samples  # (Σx_i)/m
-        # x_minus_mu_pow = np.power(X - self.mu_, 2)  # Σ(x_i-μ)^2
-        # np.var(X, ddof=1)
+        self.mu_ = np.mean(X)  # (Σx_i)/m
         if not self.biased_:
-            # todo what happens if num_samples = 1?
-            self.var_ = np.var(X, ddof=1)  # x_minus_mu_pow.sum() / (num_samples - 1)  # (Σ(x_i-μ)^2)/(m-1)
+            self.var_ = np.var(X, ddof=1)  # (Σ(x_i-μ)^2)/(m-1)
         else:
-            # todo what happens if num_samples = 0?
-            self.var_ = np.var(X, ddof=0)  # x_minus_mu_pow.sum() / num_samples  # (Σ(x_i-μ)^2)/m
-        # todo can self.var_ be 0? it can be problematic in pdf func
+            self.var_ = np.var(X, ddof=0)  # (Σ(x_i-μ)^2)/m
         self.fitted_ = True
         return self
 
@@ -113,9 +107,7 @@ class UnivariateGaussian:
             log-likelihood calculated
         """
 
-        # todo can sigma be 0? sigma might be the var (like in the documentation) - check
-        num_samples = X.size
-        log = np.log(2 * np.pi * sigma ** 2) * num_samples / 2
+        log = np.log(2 * np.pi * sigma ** 2) * X.size / 2
         inside_exp = np.sum(((X - mu) ** 2) / (2 * sigma ** 2))
         log_likelihood = -log - inside_exp
         return log_likelihood
@@ -165,16 +157,9 @@ class MultivariateGaussian:
         Sets `self.mu_`, `self.cov_` attributes according to calculated estimation.
         Then sets `self.fitted_` attribute to `True`
         """
-        # raise NotImplementedError()
 
-        # num_samples = X.shape[0]
         self.mu_ = np.mean(X, axis=0)  # (... (Σx_i)/m ...)^T
-        # empirical_mean = np.tile(self.mu_, num_samples).reshape(num_samples, self.mu_.size)
         self.cov_ = np.cov(X.T, bias=False)
-        # X_centered = X - self.mu_
-        # numerator = X_centered.T @ X_centered
-        # self.cov_ = numerator / (num_samples - 1)
-
         self.fitted_ = True
         return self
 
@@ -198,14 +183,12 @@ class MultivariateGaussian:
         """
         if not self.fitted_:
             raise ValueError("Estimator must first be fitted before calling `pdf` function")
-        # raise NotImplementedError()
 
-        # todo what happens if num_samples = 0? and if det == 0?
         denominator = np.sqrt(np.power(2 * np.pi, self.mu_.size) * det(self.cov_))  # √((2π)^d*|Σ|)
-        X_minus_mu = X - self.mu_
+        x_centered = X - self.mu_
         pdfs = []
         for i in range(X.shape[0]):
-            exp = np.exp(-0.5 * X_minus_mu[i, :] @ inv(self.cov_) @ X_minus_mu[i, :])
+            exp = np.exp(-0.5 * x_centered[i, :] @ inv(self.cov_) @ x_centered[i, :])
             pdfs.append(exp / denominator)
         return np.array(pdfs)
 
@@ -228,17 +211,15 @@ class MultivariateGaussian:
         log_likelihood: float
             log-likelihood calculated over all input data and under given parameters of Gaussian
         """
-        # raise NotImplementedError()
 
         m = X.shape[0]
         d = mu.size
-        X_minus_mu = X - mu.T
+        x_centered = X - mu.T
         first = np.log(2 * np.pi) * m * d / 2
         sign, logdet = slogdet(cov)
         second = sign * logdet * m / 2
-        thirds = []
+        third = 0
         for i in range(X.shape[0]):
-            thirds.append(-0.5 * X_minus_mu[i, :] @ inv(cov) @ X_minus_mu[i, :])
-        third = np.sum(np.array(thirds))
+            third += -0.5 * x_centered[i, :] @ inv(cov) @ x_centered[i, :]
         log_likelihood = - first - second + third
         return log_likelihood
