@@ -218,8 +218,6 @@ class MultivariateGaussian:
         first = np.log(2 * np.pi) * m * d / 2
         sign, logdet = slogdet(cov)
         second = sign * logdet * m / 2
-        third = 0
-        for i in range(X.shape[0]):
-            third += -0.5 * x_centered[i, :] @ inv(cov) @ x_centered[i, :]
+        third = -0.5 * np.sum(x_centered @ inv(cov) * x_centered)
         log_likelihood = - first - second + third
         return log_likelihood
