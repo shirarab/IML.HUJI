@@ -187,8 +187,8 @@ class MultivariateGaussian:
         denominator = np.sqrt(np.power(2 * np.pi, self.mu_.size) * det(self.cov_))  # √((2π)^d*|Σ|)
         x_centered = X - self.mu_
         pdfs = []
-        for i in range(X.shape[0]):
-            exp = np.exp(-0.5 * x_centered[i, :] @ inv(self.cov_) @ x_centered[i, :])
+        for x in x_centered:
+            exp = np.exp(-0.5 * x @ inv(self.cov_) @ x)
             pdfs.append(exp / denominator)
         return np.array(pdfs)
 

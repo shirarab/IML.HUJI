@@ -7,7 +7,7 @@ pio.templates.default = "simple_white"
 
 
 # Q2 Empirically showing sample mean is consistent
-def evaluate_expectation_error(samples, mu):
+def _evaluate_expectation_error(samples, mu):
     ms = np.linspace(10, 1000, 100, dtype=int)
     expectation_error = []
     for m in ms:
@@ -33,7 +33,7 @@ def test_univariate_gaussian():
 
     # Question 2 - Empirically showing sample mean is consistent
 
-    evaluate_expectation_error(samples, mu)
+    _evaluate_expectation_error(samples, mu)
 
     # Question 3 - Plotting Empirical PDF of fitted model
 
@@ -47,7 +47,7 @@ def test_univariate_gaussian():
 
 
 # Q5 Likelihood evaluation
-def evaluate_log_likelihood_heatmap(multivariate_gaussian, sigma, samples):
+def _evaluate_log_likelihood_heatmap(multivariate_gaussian, sigma, samples):
     ls_num_samples = 200
     f = np.linspace(-10, 10, ls_num_samples)
     log_likelihood = np.zeros((ls_num_samples, ls_num_samples))
@@ -67,7 +67,7 @@ def evaluate_log_likelihood_heatmap(multivariate_gaussian, sigma, samples):
 
 
 # Q6 Maximum likelihood
-def find_max_likelihood(f, log_likelihood):
+def _find_max_likelihood(f, log_likelihood):
     max_ll_indexes = np.unravel_index(np.argmax(log_likelihood, axis=None), log_likelihood.shape)
     max_ll = np.max(log_likelihood)
     print(f"Values of f1 and f3 that give maximum log-likelihood of {'%.3f' % max_ll} are: "
@@ -88,11 +88,13 @@ def test_multivariate_gaussian():
 
     # Question 5 - Likelihood evaluation
 
-    f, log_likelihood = evaluate_log_likelihood_heatmap(multivariate_gaussian, sigma, samples)
+    f, log_likelihood = _evaluate_log_likelihood_heatmap(multivariate_gaussian, sigma, samples)
 
     # Question 6 - Maximum likelihood
 
-    find_max_likelihood(f, log_likelihood)
+    _find_max_likelihood(f, log_likelihood)
+
+
 
 
 if __name__ == '__main__':
