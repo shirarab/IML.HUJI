@@ -107,8 +107,8 @@ class UnivariateGaussian:
             log-likelihood calculated
         """
 
-        log = np.log(2 * np.pi * sigma ** 2) * X.size / 2
-        inside_exp = np.sum(((X - mu) ** 2) / (2 * sigma ** 2))
+        log = np.log(2 * np.pi * sigma) * X.size / 2
+        inside_exp = np.sum(((X - mu) ** 2) / (2 * sigma))
         log_likelihood = -log - inside_exp
         return log_likelihood
 
