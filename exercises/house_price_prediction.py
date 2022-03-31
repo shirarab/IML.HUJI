@@ -72,8 +72,8 @@ def load_data(filename: str):
                                'condition': (IN, 1, 5), 'grade': (IN, 1, 13), 'sqft_above': gte,
                                'sqft_living15': gte, 'sqft_lot15': gt, 'price': gt,
                                'yr_built': gte, 'yr_renovated': gte}
-    dates_to_save = ['date']
-    categorical_to_save = ['zipcode']  # todo pd.get_dummies(features, columns=['zipcode'])
+    # dates_to_save = ['date']
+    # categorical_to_save = ['zipcode']  # todo pd.get_dummies(features, columns=['zipcode'])
     good_data = full_data[non_categorical_to_save.keys()]
     good_data['price'] = full_data['price']
     good_data = _validate_non_categorical(good_data, non_categorical_to_save)
@@ -124,7 +124,7 @@ def _sample_fit_test_model(train_X, train_y, test_X, test_y):
     for p in range(MIN_PERCENT, MAX_PERCENT):
         loss_i = []
         for _ in range(SAMPLE_TIMES):
-            sample_x, sample_y, __, ___ = split_train_test(train_X, train_y, p / 100.0)
+            sample_x, sample_y = split_train_test(train_X, train_y, p / 100.0)[:2]
             fitted = linear_reg.fit(sample_x.to_numpy(), sample_y.to_numpy())
             m_loss = fitted.loss(np.array(test_X), np.array(test_y))
             loss_i.append(m_loss)
@@ -151,7 +151,7 @@ def _plot_average_loss(mean_pred, std_pred):
 if __name__ == '__main__':
     np.random.seed(0)
     # Question 1 - Load and preprocessing of housing prices dataset
-    features, labels = load_data("C:\\Users\\shira\\Desktop\\IML.HUJI\\datasets\\house_prices.csv")
+    features, labels = load_data(".\\..\\datasets\\house_prices.csv")
 
     # Question 2 - Feature evaluation with respect to response
     feature_evaluation(features, labels, '.\\..\\figures')  # todo remove path before submission
