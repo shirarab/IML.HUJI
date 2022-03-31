@@ -71,13 +71,13 @@ def load_data(filename: str):
                                'floors': gt, 'waterfront': (IN, 0, 1), 'view': (IN, 0, 4),
                                'condition': (IN, 1, 5), 'grade': (IN, 1, 13), 'sqft_above': gte,
                                'sqft_living15': gte, 'sqft_lot15': gt, 'price': gt,
-                               'yr_built': gt, 'yr_renovated': gt}
+                               'yr_built': gte, 'yr_renovated': gte}
     dates_to_save = ['date']
     categorical_to_save = ['zipcode']  # todo pd.get_dummies(features, columns=['zipcode'])
     good_data = full_data[non_categorical_to_save.keys()]
     good_data['price'] = full_data['price']
     good_data = _validate_non_categorical(good_data, non_categorical_to_save)
-    # good_data = _derive_additional_features(good_data, full_data)
+    good_data = _derive_additional_features(good_data, full_data)
     label = good_data['price']
     good_data = good_data.drop('price', axis=1)
     # corr = dataset.corr()['price'].sort_values()
@@ -124,9 +124,8 @@ def _sample_fit_test_model(train_X, train_y, test_X, test_y):
     for p in range(MIN_PERCENT, MAX_PERCENT):
         loss_i = []
         for _ in range(SAMPLE_TIMES):
-            sample_x = np.array(train_X.sample(frac=p / 100))
-            sample_y = np.array(train_y.sample(frac=p / 100))
-            fitted = linear_reg.fit(sample_x, sample_y)
+            sample_x, sample_y, __, ___ = split_train_test(train_X, train_y, p / 100.0)
+            fitted = linear_reg.fit(sample_x.to_numpy(), sample_y.to_numpy())
             m_loss = fitted.loss(np.array(test_X), np.array(test_y))
             loss_i.append(m_loss)
         losses.append(loss_i)
@@ -136,31 +135,28 @@ def _sample_fit_test_model(train_X, train_y, test_X, test_y):
 def _plot_average_loss(mean_pred, std_pred):
     x = [p for p in range(MIN_PERCENT, MAX_PERCENT)]
     avg_loss_fig = go.Figure([go.Scatter(x=x, y=mean_pred, mode="markers+lines", name="Mean Prediction",
-                                marker=dict(color="green", opacity=.7)),
-                     go.Scatter(x=x, y=mean_pred - 2 * std_pred, fill=None, mode="lines",
-                                line=dict(color="lightgrey"), showlegend=False),
-                     go.Scatter(x=x, y=mean_pred + 2 * std_pred, fill='tonexty', mode="lines",
-                                line=dict(color="lightgrey"), showlegend=False)],
-                    layout=go.Layout(
-                        title="Average Loss as Function of Training Size with Error Ribbon",
-                        xaxis={"title": "Training Size Percent"},
-                        yaxis={"title": "Average Loss"})
-                    )
+                                         marker=dict(color="green", opacity=.7)),
+                              go.Scatter(x=x, y=mean_pred - 2 * std_pred, fill=None, mode="lines",
+                                         line=dict(color="lightgrey"), showlegend=False),
+                              go.Scatter(x=x, y=mean_pred + 2 * std_pred, fill='tonexty', mode="lines",
+                                         line=dict(color="lightgrey"), showlegend=False)],
+                             layout=go.Layout(
+                                 title="Average Loss as Function of Training Size with Error Ribbon",
+                                 xaxis={"title": "Training Size Percent"},
+                                 yaxis={"title": "Average Loss"})
+                             )
     avg_loss_fig.show()
 
 
 if __name__ == '__main__':
     np.random.seed(0)
     # Question 1 - Load and preprocessing of housing prices dataset
-    # raise NotImplementedError()
     features, labels = load_data("C:\\Users\\shira\\Desktop\\IML.HUJI\\datasets\\house_prices.csv")
 
     # Question 2 - Feature evaluation with respect to response
-    # raise NotImplementedError()
     feature_evaluation(features, labels, '.\\..\\figures')  # todo remove path before submission
 
     # Question 3 - Split samples into training- and testing sets.
-    # raise NotImplementedError()
     train_X, train_y, test_X, test_y = split_train_test(features, labels, 0.75)
 
     # Question 4 - Fit model over increasing percentages of the overall training data
