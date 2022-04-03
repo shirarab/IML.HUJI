@@ -85,7 +85,7 @@ def load_data(filename: str):
 
 
 def _pearson_correlation(x, y):
-    return (np.cov(x, y) / np.std(x) * np.std(y))[0][1]  # todo check
+    return (np.cov(x, y) / np.std(x) * np.std(y))[0][1]
 
 
 def feature_evaluation(X: pd.DataFrame, y: pd.Series, output_path: str = ".") -> NoReturn:
@@ -107,15 +107,13 @@ def feature_evaluation(X: pd.DataFrame, y: pd.Series, output_path: str = ".") ->
     """
 
     for feature in X.columns:
-        # if feature.startswith('zipcode_'):
-        #     continue
         p_corr = _pearson_correlation(X[feature], y)
         # print(f"feature {feature} with p_corr {p_corr}")
         figure = px.scatter(x=X[feature], y=y,
                             title=f"Pearson Correlation Between {feature} and Response is {p_corr}")
         figure.update_layout(dict(xaxis_title=feature, yaxis_title="Response - Price"))
-        figure.write_html(f"{output_path}\\{feature}_corr.html")
-        # figure.write_image(f"{output_path}\\{feature}_corr.png")
+        figure.write_html(f"{output_path}/{feature}_corr.html")
+        # figure.write_image(f"{output_path}/{feature}_corr.png")
 
 
 def _sample_fit_test_model(train_X, train_y, test_X, test_y):
@@ -151,10 +149,10 @@ def _plot_average_loss(mean_pred, std_pred):
 if __name__ == '__main__':
     np.random.seed(0)
     # Question 1 - Load and preprocessing of housing prices dataset
-    features, labels = load_data(".\\..\\datasets\\house_prices.csv")
+    features, labels = load_data("./../datasets/house_prices.csv")
 
     # Question 2 - Feature evaluation with respect to response
-    feature_evaluation(features, labels, '.\\..\\figures')  # todo remove path before submission
+    feature_evaluation(features, labels, './../figures')  # todo remove path before submission
 
     # Question 3 - Split samples into training- and testing sets.
     train_X, train_y, test_X, test_y = split_train_test(features, labels, 0.75)
