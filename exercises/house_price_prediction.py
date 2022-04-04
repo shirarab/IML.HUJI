@@ -39,12 +39,18 @@ def _validate_non_categorical(good_data, non_categorical_to_save):
     return good_data
 
 
-def _derive_additional_features(good_data, full_data):
-    diff_cols_titles = {'yrs_since_built': 'yr_built', 'yrs_since_renovated': 'yr_renovated'}
-    year_sold = full_data['date'].str[:4]  # todo maybe count also days....
+def _derive_additional_features(good_data):
+    date_dt = pd.to_datetime(good_data['date'], format="%Y%m%dT%H%M%S", errors='coerce').dt
+    year_sold = date_dt.year  # full_data['date'].str[:4]  # todo maybe count also days....
     # dataset['date'].replace(np.nan, 0, inplace=True)
-    for new_k, old_k in diff_cols_titles.items():
-        good_data[new_k] = np.abs(pandas.to_numeric(year_sold) - full_data[old_k])
+    good_data['yrs_since_built'] = year_sold - good_data['yr_built']
+    yrs_since_renovated = year_sold - good_data['yr_renovated']
+    good_data['yrs_since_renovated'] = np.where(yrs_since_renovated == good_data['yr_built'],
+                                                yrs_since_renovated,
+                                                good_data['yrs_since_built'])
+    good_data['has_basement'] = np.where(good_data['sqft_basement'] > 0, 1, 0)
+    good_data = pd.concat([good_data, pd.get_dummies(year_sold)], axis=1)
+    good_data = good_data.drop('sqft_basement', axis=1)
     return good_data
 
 
@@ -62,25 +68,24 @@ def load_data(filename: str):
     DataFrame or a Tuple[DataFrame, Series]
     """
 
-    full_data = pd.read_csv(filename).dropna().drop_duplicates()
-    # non_categorical_to_save = ['bedrooms', 'bathrooms', 'sqft_living', 'sqft_lot', 'floors',
-    #                            'waterfront', 'view', 'condition', 'grade', 'sqft_above',
-    #                            'sqft_living15', 'sqft_lot15']
+    full_data = pd.read_csv(filename, parse_dates=[1]).dropna().drop_duplicates()
     gte, gt = (GTE, np.inf, np.inf), (GT, np.inf, np.inf)
     # sqft_basement = sqft_living - sqft_above
     non_categorical_to_save = {'bedrooms': gte, 'bathrooms': gte, 'sqft_living': gte, 'sqft_lot': gt,
                                'floors': gt, 'waterfront': (IN, 0, 1), 'view': (IN, 0, 4),
                                'condition': (IN, 1, 5), 'grade': (IN, 1, 13), 'sqft_above': gte,
                                'sqft_living15': gte, 'sqft_lot15': gt, 'price': gt,
-                               'yr_built': gte, 'yr_renovated': gte}
+                               'yr_built': gte, 'yr_renovated': gte, 'sqft_basement': gte}
     # dates_to_save = ['date']
     # categorical_to_save = ['zipcode']  # todo pd.get_dummies(features, columns=['zipcode'])
     good_data = full_data[non_categorical_to_save.keys()]
     good_data['price'] = full_data['price']
+    good_data['date'] = full_data['date']
     good_data = _validate_non_categorical(good_data, non_categorical_to_save)
-    good_data = _derive_additional_features(good_data, full_data)
+    good_data = _derive_additional_features(good_data)
     label = good_data['price']
-    good_data = good_data.drop('price', axis=1)
+    # good_data.reset_index(inplace=True, drop=True)
+    good_data = good_data.drop(['price', 'date'], axis=1)
     # corr = dataset.corr()['price'].sort_values()
     return good_data, label
 
@@ -123,7 +128,8 @@ def _sample_fit_test_model(train_X, train_y, test_X, test_y):
     for p in range(MIN_PERCENT, MAX_PERCENT):
         loss_i = []
         for _ in range(SAMPLE_TIMES):
-            sample_x, sample_y = split_train_test(train_X, train_y, p / 100.0)[:2]
+            sample_x = train_X.sample(frac=p / 100.0)
+            sample_y = train_y.iloc[sample_x.index]
             fitted = linear_reg.fit(sample_x.to_numpy(), sample_y.to_numpy())
             m_loss = fitted.loss(np.array(test_X), np.array(test_y))
             loss_i.append(m_loss)
@@ -157,7 +163,8 @@ if __name__ == '__main__':
 
     # Question 3 - Split samples into training- and testing sets.
     train_X, train_y, test_X, test_y = split_train_test(features, labels, 0.75)
-
+    train_X.reset_index(inplace=True, drop=True)
+    train_y.reset_index(inplace=True, drop=True)
     # Question 4 - Fit model over increasing percentages of the overall training data
     # For every percentage p in 10%, 11%, ..., 100%, repeat the following 10 times:
     #   1) Sample p% of the overall training data

@@ -62,6 +62,8 @@ def load_data(filename: str) -> pd.DataFrame:
 
 def _explore_israel_data(israel_samples):
     israel_daily_temp = israel_samples[[TEMP, DAY_OF_YEAR, YEAR]]
+    israel_daily_temp[YEAR] = israel_daily_temp[YEAR].astype(str)
+    # israel_daily_temp.loc[:, YEAR] = israel_daily_temp.loc[:, YEAR].astype(str)
     daily_fig = px.scatter(israel_daily_temp, x=DAY_OF_YEAR, y=TEMP, color=YEAR,
                            title=f"Average Daily Temperature Change as a Function of the `Day of Year`")
     daily_fig.update_layout(dict(xaxis_title='Day of Year', yaxis_title="Average Daily Temperature Change"))

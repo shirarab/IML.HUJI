@@ -55,7 +55,9 @@ class LinearRegression(BaseEstimator):
         # todo third try - isnt right bc doesnt really add col of 1s to x but works
         if self.include_intercept_:
             new_x = np.insert(X.copy(), 0, 1, axis=1)
-        self.coefs_ = pinv(X) @ y
+            self.coefs_ = pinv(new_x) @ y
+        else:
+            self.coefs_ = pinv(X) @ y
 
         # todo second try - probs ok
         # if self.include_intercept_:
@@ -84,8 +86,11 @@ class LinearRegression(BaseEstimator):
         responses : ndarray of shape (n_samples, )
             Predicted responses of given samples
         """
-
-        return X @ self.coefs_
+        if self.include_intercept_:
+            new_x = np.insert(X.copy(), 0, 1, axis=1)
+            return new_x @ self.coefs_
+        else:
+            return X @ self.coefs_
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """
