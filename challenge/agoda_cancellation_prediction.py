@@ -68,8 +68,11 @@ def load_data(filename: str, isTest: bool):
 
     # features["cancellation_datetime"].replace(np.nan, "", inplace=True)
     _to_date_number(features, ["hotel_live_date"])
+    features = features.loc[:, ~features.columns.duplicated()]
+    features.reset_index(inplace=True, drop=True)
     if not isTest:
         labels = full_data["cancellation_datetime"].between("2015-07-02", "2055-09-30").astype(int)
+        labels.reset_index(inplace=True, drop=True)
         return features, labels
     return features
 
@@ -98,12 +101,14 @@ def evaluate_and_export(estimator: BaseEstimator, X: np.ndarray, filename: str):
 
 
 def expand_to_train_data(test_data, train_columns):
-    for col in train_columns:
-        if col not in test_data.columns:
-            test_data[col] = np.zeros(np.size(test_data, axis=0))
-    for col in test_data.columns:
-        if col not in train_columns:
-            del test_data[col]
+    cols_to_add = set(train_columns) - set(test_data.columns)
+    cols_to_remove = set(test_data.columns) - set(train_columns)
+    for col in cols_to_add:
+        test_data[col] = 0
+    for col in cols_to_remove:
+        del test_data[col]
+    test_data = test_data[list(train_columns)]
+    return test_data
 
 
 if __name__ == '__main__':
@@ -112,12 +117,12 @@ if __name__ == '__main__':
     # Load data
     df, cancellation_labels = load_data("../datasets/agoda_cancellation_train.csv", isTest=False)
     train_X, test_X, train_y, test_y = sklearn.model_selection.train_test_split(df, cancellation_labels)
-    all_features_in_training_set = df.columns
+    training_features = df.columns
     # Fit model over data
     estimator = AgodaCancellationEstimator().fit(train_X, train_y)
-    test_of_week1 = load_data("test_set_week_1.csv", isTest=True)
-    expand_to_train_data(test_of_week1, all_features_in_training_set)
-    # Store model predictions over test set
-    evaluate_and_export(estimator, test_of_week1, "206996761_212059679_211689765.csv")
-    print(f"Percent wrong classifications: {estimator.loss(test_X, test_y)}")
+    test_set = load_data("./testsets/test_set_week_1.csv", isTest=True)
+    test_set = expand_to_train_data(test_set, training_features)
 
+    # Store model predictions over test set
+    evaluate_and_export(estimator, test_set, "206996761_212059679_211689765.csv")
+    print(f"Percent wrong classifications: {estimator.loss(test_X, test_y)}")

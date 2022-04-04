@@ -12,6 +12,11 @@ import plotly.express as px
 import plotly.io as pio
 
 pio.templates.default = "simple_white"
+
+GT = lambda value: value > 0
+IN = lambda value, a, b: (value >= a) & (value <= b)  # value in range(a, b+1)
+GTE = lambda value: value >= 0
+
 SAMPLE_TIMES = 10
 MIN_PERCENT, MAX_PERCENT = 10, 101  # todo 10,101
 
@@ -56,10 +61,6 @@ def load_data(filename: str):
     Design matrix and response vector (prices) - either as a single
     DataFrame or a Tuple[DataFrame, Series]
     """
-
-    GT = lambda value: value > 0
-    IN = lambda value, a, b: (value >= a) & (value <= b)  # value in range(a, b+1)
-    GTE = lambda value: value >= 0
 
     full_data = pd.read_csv(filename).dropna().drop_duplicates()
     # non_categorical_to_save = ['bedrooms', 'bathrooms', 'sqft_living', 'sqft_lot', 'floors',
