@@ -30,8 +30,9 @@ def _add_new_cols(features, full_data):
     features['days_till_vacation'] = features['days_till_vacation'].apply(lambda x: x.days)
     features['is_checkin_on_weekend'] = features['checkin_date_dayofweek'].apply(lambda x: x > 4)
 
-    # for title in ['checkout_date']:
-    #     del features[title]
+
+# for title in ['checkout_date']:
+#     del features[title]
 
 
 def _add_categories(features, full_data, titles):
@@ -57,21 +58,24 @@ def load_data(filename: str, isTest: bool):
     3) Tuple of ndarray of shape (n_samples, n_features) and ndarray of shape (n_samples,)
     """
     full_data = pd.read_csv(filename)  # .dropna().drop_duplicates()
-    good_fields = ["hotel_star_rating",
+    good_fields = ["hotel_star_rating", "is_first_booking", "is_user_logged_in",
                    "hotel_live_date",
                    "guest_is_not_the_customer", "no_of_adults", "no_of_children", "no_of_extra_bed", "no_of_room"]
+
     features = full_data[good_fields]
     _add_new_cols(features, full_data)  # adding columns for the length of the stay, is weekend, day of week
     features = _add_categories(features, full_data,
                                ['accommadation_type_name', 'customer_nationality', 'hotel_country_code',
-                                'charge_option'])
-
+                                'charge_option', 'original_payment_type', 'original_payment_currency'])
+    features_true_false = ["is_first_booking", "is_user_logged_in"]
+    for f in features_true_false:
+        features[f] = np.where(features[f] == True, 1, 0)
     # features["cancellation_datetime"].replace(np.nan, "", inplace=True)
     _to_date_number(features, ["hotel_live_date"])
     features = features.loc[:, ~features.columns.duplicated()]
     features.reset_index(inplace=True, drop=True)
     if not isTest:
-        labels = full_data["cancellation_datetime"].between("2015-07-02", "2055-09-30").astype(int)
+        labels = pd.to_numeric(pd.to_datetime(full_data["cancellation_datetime"]))
         labels.reset_index(inplace=True, drop=True)
         return features, labels
     return features
@@ -96,8 +100,11 @@ def evaluate_and_export(estimator: BaseEstimator, X: np.ndarray, filename: str):
         path to store file at
 
     """
-    pred = estimator.predict(X)
-    pd.DataFrame(pred, columns=["predicted_values"]).to_csv(filename, index=False)
+    predictions = estimator.predict(X)
+    prediction_dates = pd.to_datetime(predictions)
+
+    # pred = estimator.predict(X)
+    pd.DataFrame(prediction_dates, columns=["predicted_values"]).to_csv(filename, index=False)
 
 
 def expand_to_train_data(test_data, train_columns):
@@ -118,11 +125,14 @@ if __name__ == '__main__':
     df, cancellation_labels = load_data("../datasets/agoda_cancellation_train.csv", isTest=False)
     train_X, test_X, train_y, test_y = sklearn.model_selection.train_test_split(df, cancellation_labels)
     training_features = df.columns
+
     # Fit model over data
     estimator = AgodaCancellationEstimator().fit(train_X, train_y)
     test_set = load_data("./testsets/test_set_week_1.csv", isTest=True)
     test_set = expand_to_train_data(test_set, training_features)
 
     # Store model predictions over test set
-    evaluate_and_export(estimator, test_set, "206996761_212059679_211689765.csv")
+    # evaluate_and_export(estimator, test_set, "206996761_212059679_211689765.csv")
+    evaluate_and_export(estimator, test_X, "predicted.csv")
+    pd.DataFrame(pd.to_datetime(test_y)).to_csv("testy.csv", index=False)
     print(f"Percent wrong classifications: {estimator.loss(test_X, test_y)}")
