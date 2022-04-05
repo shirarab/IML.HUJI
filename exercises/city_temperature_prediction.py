@@ -11,10 +11,6 @@ import plotly.io as pio
 
 pio.templates.default = "simple_white"
 
-# # todo these exact lambdas is in house_price_prediction. can i import them maybe?
-# GT = lambda value: value > 0
-# IN = lambda value, a, b: (value >= a) & (value <= b)  # value in range(a, b+1)
-
 COUNTRY = 'Country'
 DATE = 'Date'
 YEAR = 'Year'
@@ -23,19 +19,7 @@ DAY = 'Day'
 TEMP = 'Temp'
 DAY_OF_YEAR = 'DayOfYear'
 ISRAEL = 'Israel'
-K_DEGREE = 5  # todo
-
-
-# # todo this exact function is in house_price_prediction. can i import it maybe?
-# def _validate_non_categorical(good_data, non_categorical_to_save):
-#     for column_name, validate_func in non_categorical_to_save.items():
-#         func, a, b = validate_func
-#         value = good_data[column_name]
-#         if a == np.inf:
-#             good_data = good_data[func(value)]
-#         else:
-#             good_data = good_data[func(value, a, b)]
-#     return good_data
+K_DEGREE = 5
 
 
 def load_data(filename: str) -> pd.DataFrame:
@@ -65,6 +49,7 @@ def _explore_israel_data(israel_samples):
     israel_daily_temp[YEAR] = israel_daily_temp[YEAR].astype(str)
     # israel_daily_temp.loc[:, YEAR] = israel_daily_temp.loc[:, YEAR].astype(str)
     daily_fig = px.scatter(israel_daily_temp, x=DAY_OF_YEAR, y=TEMP, color=YEAR,
+                           color_discrete_sequence=px.colors.qualitative.Dark24,
                            title=f"Average Daily Temperature Change as a Function of the `Day of Year`")
     daily_fig.update_layout(dict(xaxis_title='Day of Year', yaxis_title="Average Daily Temperature Change"))
     daily_fig.show()
@@ -92,7 +77,10 @@ def _fit_israel_poly_model(train_X, train_y, test_X, test_y):
     for k in range(1, 11):
         poly_model = PolynomialFitting(k)
         fitted = poly_model.fit(train_X.to_numpy(), train_y.to_numpy())
-        losses.append(fitted.loss(test_X.to_numpy(), test_y.to_numpy()))
+        loss_k = fitted.loss(test_X.to_numpy(), test_y.to_numpy())
+        loss_k = np.round(loss_k, 2)
+        print(f"Test error for K={k} is {loss_k}")
+        losses.append(loss_k)
         k_degree.append(k)
     poly_fig = px.bar(x=k_degree, y=losses)
     poly_fig.update_layout(dict(xaxis_title='K Degree', yaxis_title="Loss",
