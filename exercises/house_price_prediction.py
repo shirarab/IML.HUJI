@@ -18,14 +18,7 @@ IN = lambda value, a, b: (value >= a) & (value <= b)  # value in range(a, b+1)
 GTE = lambda value: value >= 0
 
 SAMPLE_TIMES = 10
-MIN_PERCENT, MAX_PERCENT = 10, 101  # todo 10,101
-
-
-# def _replace_col_nan_vals(dataset: pd.DataFrame):
-#     cols = np.array(["bedrooms", "bathrooms"])
-#     for col in cols:
-#         mean = dataset[col].mean()
-#         dataset[col].replace(np.nan, mean, inplace=True)
+MIN_PERCENT, MAX_PERCENT = 10, 101
 
 
 def _validate_non_categorical(good_data, non_categorical_to_save):
@@ -39,19 +32,32 @@ def _validate_non_categorical(good_data, non_categorical_to_save):
     return good_data
 
 
-def _derive_additional_features(good_data):
-    date_dt = pd.to_datetime(good_data['date'], format="%Y%m%dT%H%M%S", errors='coerce').dt
-    year_sold = date_dt.year  # full_data['date'].str[:4]  # todo maybe count also days....
-    # dataset['date'].replace(np.nan, 0, inplace=True)
-    good_data['yrs_since_built'] = year_sold - good_data['yr_built']
-    yrs_since_renovated = year_sold - good_data['yr_renovated']
-    good_data['yrs_since_renovated'] = np.where(yrs_since_renovated == good_data['yr_built'],
-                                                yrs_since_renovated,
-                                                good_data['yrs_since_built'])
-    good_data['has_basement'] = np.where(good_data['sqft_basement'] > 0, 1, 0)
-    good_data = pd.concat([good_data, pd.get_dummies(year_sold)], axis=1)
-    good_data = good_data.drop('sqft_basement', axis=1)
-    return good_data
+def _derive_additional_features(df):
+    date_dt = pd.to_datetime(df['date'], format="%Y%m%dT%H%M%S", errors='coerce').dt
+    year_sold = date_dt.year
+    df['yrs_since_built'] = year_sold - df['yr_built']
+    yrs_since_renovated = year_sold - df['yr_renovated']
+    df['yrs_since_renovated'] = np.where(df['yr_renovated'] != 0,
+                                         yrs_since_renovated, df['yrs_since_built'])
+    df['has_basement'] = np.where(df['sqft_basement'] > 0, 1, 0)
+    df = df.drop('sqft_basement', axis=1)
+
+    # add sqrt or 2nd power
+    df['sqft_living_sqrt'] = df['sqft_living'].apply(np.sqrt)
+    df['sqft_lot_sqrt'] = df['sqft_lot'].apply(np.sqrt)
+    df['sqft_above_sqrt'] = df['sqft_above'].apply(np.sqrt)
+    df['bedrooms_square'] = df['bedrooms'] * df['bedrooms']
+    df['floors_square'] = df['floors'] * df['floors']
+    df['grade_square'] = df['grade'] * df['grade']
+    return df
+
+
+# def _add_categorical_cols(good_data):
+#     categorical_cols = ['view', 'condition', 'grade', 'zipcode']
+#     dummies = pd.get_dummies(good_data, columns=categorical_cols, drop_first=True)
+#     good_data = pd.concat([good_data, dummies], axis=1)
+#     good_data = good_data.drop(categorical_cols, axis=1)
+#     return good_data
 
 
 def load_data(filename: str):
@@ -71,27 +77,23 @@ def load_data(filename: str):
     full_data = pd.read_csv(filename, parse_dates=[1]).dropna().drop_duplicates()
     gte, gt = (GTE, np.inf, np.inf), (GT, np.inf, np.inf)
     # sqft_basement = sqft_living - sqft_above
-    non_categorical_to_save = {'bedrooms': gte, 'bathrooms': gte, 'sqft_living': gte, 'sqft_lot': gt,
-                               'floors': gt, 'waterfront': (IN, 0, 1), 'view': (IN, 0, 4),
-                               'condition': (IN, 1, 5), 'grade': (IN, 1, 13), 'sqft_above': gte,
-                               'sqft_living15': gte, 'sqft_lot15': gt, 'price': gt,
+    non_categorical_to_save = {'bedrooms': (IN, 1, 15), 'bathrooms': gte, 'sqft_living': gte,
+                               'sqft_lot': gt, 'floors': gt, 'waterfront': (IN, 0, 1),
+                               'view': (IN, 0, 4), 'condition': (IN, 1, 5), 'grade': (IN, 1, 13),
+                               'sqft_above': gte, 'sqft_living15': gte, 'sqft_lot15': gt, 'price': gt,
                                'yr_built': gte, 'yr_renovated': gte, 'sqft_basement': gte}
-    # dates_to_save = ['date']
-    # categorical_to_save = ['zipcode']  # todo pd.get_dummies(features, columns=['zipcode'])
     good_data = full_data[non_categorical_to_save.keys()]
     good_data['price'] = full_data['price']
     good_data['date'] = full_data['date']
     good_data = _validate_non_categorical(good_data, non_categorical_to_save)
     good_data = _derive_additional_features(good_data)
     label = good_data['price']
-    # good_data.reset_index(inplace=True, drop=True)
     good_data = good_data.drop(['price', 'date'], axis=1)
-    # corr = dataset.corr()['price'].sort_values()
     return good_data, label
 
 
 def _pearson_correlation(x, y):
-    return (np.cov(x, y) / np.std(x) * np.std(y))[0][1]
+    return (np.cov(x, y) / (np.std(x) * np.std(y)))[0][1]
 
 
 def feature_evaluation(X: pd.DataFrame, y: pd.Series, output_path: str = ".") -> NoReturn:
@@ -113,6 +115,8 @@ def feature_evaluation(X: pd.DataFrame, y: pd.Series, output_path: str = ".") ->
     """
 
     for feature in X.columns:
+        if feature == 'has_basement':
+            continue
         p_corr = _pearson_correlation(X[feature], y)
         # print(f"feature {feature} with p_corr {p_corr}")
         figure = px.scatter(x=X[feature], y=y,
