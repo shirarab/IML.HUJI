@@ -37,7 +37,6 @@ def load_data(filename: str) -> pd.DataFrame:
 
     full_data = pd.read_csv(filename, parse_dates=[2]).dropna().drop_duplicates()
     full_data[DAY_OF_YEAR] = pd.to_datetime(full_data[DATE]).dt.dayofyear
-
     gt = (GT, np.inf, np.inf)
     non_categorical_to_save = {YEAR: gt, MONTH: (IN, 1, 12), DAY: (IN, 1, 31), TEMP: (IN, -50, 50)}
     full_data = _validate_non_categorical(full_data, non_categorical_to_save)
@@ -47,7 +46,6 @@ def load_data(filename: str) -> pd.DataFrame:
 def _explore_israel_data(israel_samples):
     israel_daily_temp = israel_samples[[TEMP, DAY_OF_YEAR, YEAR]]
     israel_daily_temp[YEAR] = israel_daily_temp[YEAR].astype(str)
-    # israel_daily_temp.loc[:, YEAR] = israel_daily_temp.loc[:, YEAR].astype(str)
     daily_fig = px.scatter(israel_daily_temp, x=DAY_OF_YEAR, y=TEMP, color=YEAR,
                            color_discrete_sequence=px.colors.qualitative.Dark24,
                            title=f"Average Daily Temperature Change as a Function of the `Day of Year`")

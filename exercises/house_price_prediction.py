@@ -52,14 +52,6 @@ def _derive_additional_features(df):
     return df
 
 
-# def _add_categorical_cols(good_data):
-#     categorical_cols = ['view', 'condition', 'grade', 'zipcode']
-#     dummies = pd.get_dummies(good_data, columns=categorical_cols, drop_first=True)
-#     good_data = pd.concat([good_data, dummies], axis=1)
-#     good_data = good_data.drop(categorical_cols, axis=1)
-#     return good_data
-
-
 def load_data(filename: str):
     """
     Load house prices dataset and preprocess data.
@@ -118,12 +110,10 @@ def feature_evaluation(X: pd.DataFrame, y: pd.Series, output_path: str = ".") ->
         if feature == 'has_basement':
             continue
         p_corr = _pearson_correlation(X[feature], y)
-        # print(f"feature {feature} with p_corr {p_corr}")
         figure = px.scatter(x=X[feature], y=y,
                             title=f"Pearson Correlation Between {feature} and Response is {p_corr}")
         figure.update_layout(dict(xaxis_title=feature, yaxis_title="Response - Price"))
         figure.write_html(f"{output_path}/{feature}_corr.html")
-        # figure.write_image(f"{output_path}/{feature}_corr.png")
 
 
 def _sample_fit_test_model(train_X, train_y, test_X, test_y):
@@ -169,6 +159,7 @@ if __name__ == '__main__':
     train_X, train_y, test_X, test_y = split_train_test(features, labels, 0.75)
     train_X.reset_index(inplace=True, drop=True)
     train_y.reset_index(inplace=True, drop=True)
+
     # Question 4 - Fit model over increasing percentages of the overall training data
     # For every percentage p in 10%, 11%, ..., 100%, repeat the following 10 times:
     #   1) Sample p% of the overall training data
