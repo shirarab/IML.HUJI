@@ -38,7 +38,6 @@ def split_train_test(X: pd.DataFrame, y: pd.Series, train_proportion: float = .7
     indices = np.random.permutation(n_samples)
     train_i = indices[:int(np.ceil(train_proportion * n_samples))],
     test_i = indices[int(np.floor((1-train_proportion) * n_samples)):]
-    # test_i = indices[int(np.ceil(train_proportion * n_samples)):]
     train_x = X.T[X.axes[0][train_i]].T
     train_y = y.T[y.axes[0][train_i]].T
     test_x = X.T[X.axes[0][test_i]].T

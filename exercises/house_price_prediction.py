@@ -21,24 +21,35 @@ SAMPLE_TIMES = 10
 MIN_PERCENT, MAX_PERCENT = 10, 101
 
 
-def _validate_non_categorical(good_data, non_categorical_to_save):
-    for column_name, validate_func in non_categorical_to_save.items():
+def _validate_data(df, data):
+    """
+    validates data in df according to given data validation function and column name.
+    """
+
+    for column_name, validate_func in data.items():
         func, a, b = validate_func
-        value = good_data[column_name]
+        value = df[column_name]
         if a == np.inf:
-            good_data = good_data[func(value)]
+            df = df[func(value)]
         else:
-            good_data = good_data[func(value, a, b)]
-    return good_data
+            df = df[func(value, a, b)]
+    return df
 
 
 def _derive_additional_features(df):
+    """
+    adds new features to given df.
+    """
+
+    # add date related features
     date_dt = pd.to_datetime(df['date'], format="%Y%m%dT%H%M%S", errors='coerce').dt
     year_sold = date_dt.year
     df['yrs_since_built'] = year_sold - df['yr_built']
     yrs_since_renovated = year_sold - df['yr_renovated']
     df['yrs_since_renovated'] = np.where(df['yr_renovated'] != 0,
                                          yrs_since_renovated, df['yrs_since_built'])
+
+    # change basement to 0s and 1s
     df['has_basement'] = np.where(df['sqft_basement'] > 0, 1, 0)
     df = df.drop('sqft_basement', axis=1)
 
@@ -49,6 +60,9 @@ def _derive_additional_features(df):
     df['bedrooms_square'] = df['bedrooms'] * df['bedrooms']
     df['floors_square'] = df['floors'] * df['floors']
     df['grade_square'] = df['grade'] * df['grade']
+
+    # categorize zipcode
+    df = pd.get_dummies(df, columns=['zipcode'], drop_first=True)
     return df
 
 
@@ -73,11 +87,12 @@ def load_data(filename: str):
                                'sqft_lot': gt, 'floors': gt, 'waterfront': (IN, 0, 1),
                                'view': (IN, 0, 4), 'condition': (IN, 1, 5), 'grade': (IN, 1, 13),
                                'sqft_above': gte, 'sqft_living15': gte, 'sqft_lot15': gt, 'price': gt,
-                               'yr_built': gte, 'yr_renovated': gte, 'sqft_basement': gte}
+                               'yr_built': gte, 'yr_renovated': gte, 'sqft_basement': gte,
+                               'zipcode': (IN, 98001, 98481)}
     good_data = full_data[non_categorical_to_save.keys()]
     good_data['price'] = full_data['price']
     good_data['date'] = full_data['date']
-    good_data = _validate_non_categorical(good_data, non_categorical_to_save)
+    good_data = _validate_data(good_data, non_categorical_to_save)
     good_data = _derive_additional_features(good_data)
     label = good_data['price']
     good_data = good_data.drop(['price', 'date'], axis=1)
@@ -85,6 +100,7 @@ def load_data(filename: str):
 
 
 def _pearson_correlation(x, y):
+    """calculates pearson correlation of x and y."""
     return (np.cov(x, y) / (np.std(x) * np.std(y)))[0][1]
 
 
@@ -107,7 +123,7 @@ def feature_evaluation(X: pd.DataFrame, y: pd.Series, output_path: str = ".") ->
     """
 
     for feature in X.columns:
-        if feature == 'has_basement':
+        if feature == 'has_basement' or feature.startswith('zipcode_'):
             continue
         p_corr = _pearson_correlation(X[feature], y)
         figure = px.scatter(x=X[feature], y=y,
@@ -117,6 +133,7 @@ def feature_evaluation(X: pd.DataFrame, y: pd.Series, output_path: str = ".") ->
 
 
 def _sample_fit_test_model(train_X, train_y, test_X, test_y):
+    """Question 4 - Fit model over increasing percentages of the overall training data"""
     losses = []
     linear_reg = LinearRegression(include_intercept=True)
     for p in range(MIN_PERCENT, MAX_PERCENT):
@@ -132,6 +149,7 @@ def _sample_fit_test_model(train_X, train_y, test_X, test_y):
 
 
 def _plot_average_loss(mean_pred, std_pred):
+    """plot average loss as function of training size with error ribbon of size (mean-2*std, mean+2*std)"""
     x = [p for p in range(MIN_PERCENT, MAX_PERCENT)]
     avg_loss_fig = go.Figure([go.Scatter(x=x, y=mean_pred, mode="markers+lines", name="Mean Prediction",
                                          marker=dict(color="green", opacity=.7)),

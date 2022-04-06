@@ -1,7 +1,7 @@
 import IMLearn.learners.regressors.linear_regression
 from IMLearn.learners.regressors import PolynomialFitting
 from IMLearn.utils import split_train_test
-from house_price_prediction import _validate_non_categorical  # todo i added
+from house_price_prediction import _validate_data  # todo i added
 from house_price_prediction import GT, IN  # todo i added
 
 import numpy as np
@@ -39,11 +39,12 @@ def load_data(filename: str) -> pd.DataFrame:
     full_data[DAY_OF_YEAR] = pd.to_datetime(full_data[DATE]).dt.dayofyear
     gt = (GT, np.inf, np.inf)
     non_categorical_to_save = {YEAR: gt, MONTH: (IN, 1, 12), DAY: (IN, 1, 31), TEMP: (IN, -50, 50)}
-    full_data = _validate_non_categorical(full_data, non_categorical_to_save)
+    full_data = _validate_data(full_data, non_categorical_to_save)
     return full_data
 
 
 def _explore_israel_data(israel_samples):
+    """Question 2 - Exploring data for Israel."""
     israel_daily_temp = israel_samples[[TEMP, DAY_OF_YEAR, YEAR]]
     israel_daily_temp[YEAR] = israel_daily_temp[YEAR].astype(str)
     daily_fig = px.scatter(israel_daily_temp, x=DAY_OF_YEAR, y=TEMP, color=YEAR,
@@ -60,6 +61,7 @@ def _explore_israel_data(israel_samples):
 
 
 def _explore_country_temp(dataframe):
+    """Question 3 - Exploring differences between countries."""
     group_cm_temp = dataframe.groupby([COUNTRY, MONTH])[TEMP]
     avg_dev = group_cm_temp.agg(np.average).reset_index()
     std_dev = group_cm_temp.agg(np.std).reset_index()
@@ -70,6 +72,7 @@ def _explore_country_temp(dataframe):
 
 
 def _fit_israel_poly_model(train_X, train_y, test_X, test_y):
+    """Question 4 - Fitting model for different values of `k`."""
     losses = []
     k_degree = []
     for k in range(1, 11):
@@ -88,6 +91,7 @@ def _fit_israel_poly_model(train_X, train_y, test_X, test_y):
 
 
 def _fit_countries_poly_model(train_X, train_y, dataframe):
+    """Question 5 - Evaluating fitted model on different countries."""
     poly_model = PolynomialFitting(K_DEGREE).fit(train_X.to_numpy(), train_y.to_numpy())
     countries = pd.get_dummies(dataframe[COUNTRY]).columns.drop(ISRAEL)
     losses = []

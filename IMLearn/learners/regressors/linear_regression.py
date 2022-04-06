@@ -52,25 +52,11 @@ class LinearRegression(BaseEstimator):
         """
 
         # if intercept -> x should have column of 1s
-        # todo third try - isnt right bc doesnt really add col of 1s to x but works
         if self.include_intercept_:
             new_x = np.insert(X.copy(), 0, 1, axis=1)
             self.coefs_ = pinv(new_x) @ y
         else:
             self.coefs_ = pinv(X) @ y
-
-        # todo second try - probs ok
-        # if self.include_intercept_:
-        #     X = np.insert(X, 0, 1, axis=1)
-        # self.coefs_ = pinv(X) @ y
-
-        # todo first try
-        # if self.include_intercept_:
-        #     new_x = X.copy()
-        #     new_x = np.insert(new_x, 0, 1, axis=1)
-        #     self.coefs_ = pinv(new_x) @ y
-        # else:
-        #     self.coefs_ = pinv(X) @ y
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
