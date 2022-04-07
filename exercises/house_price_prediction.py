@@ -171,7 +171,7 @@ if __name__ == '__main__':
     features, labels = load_data("./../datasets/house_prices.csv")
 
     # Question 2 - Feature evaluation with respect to response
-    feature_evaluation(features, labels, './../figures')  # todo remove path before submission
+    feature_evaluation(features, labels, './../figures')
 
     # Question 3 - Split samples into training- and testing sets.
     train_X, train_y, test_X, test_y = split_train_test(features, labels, 0.75)

@@ -1,8 +1,8 @@
 import IMLearn.learners.regressors.linear_regression
 from IMLearn.learners.regressors import PolynomialFitting
 from IMLearn.utils import split_train_test
-from house_price_prediction import _validate_data  # todo i added
-from house_price_prediction import GT, IN  # todo i added
+from house_price_prediction import _validate_data
+from house_price_prediction import GT, IN
 
 import numpy as np
 import pandas as pd
