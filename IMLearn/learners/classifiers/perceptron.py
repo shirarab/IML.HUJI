@@ -29,8 +29,10 @@ class Perceptron(BaseEstimator):
 
     callback_: Callable[[Perceptron, np.ndarray, int], None]
             A callable to be called after each update of the model while fitting to given data
-            Callable function should receive as input a Perceptron instance, current sample and current response
+            Callable function should receive as input a Perceptron instance, current sample and
+            current response
     """
+
     def __init__(self,
                  include_intercept: bool = True,
                  max_iter: int = 1000,
@@ -48,7 +50,8 @@ class Perceptron(BaseEstimator):
 
         callback: Callable[[Perceptron, np.ndarray, int], None]
             A callable to be called after each update of the model while fitting to given data
-            Callable function should receive as input a Perceptron instance, current sample and current response
+            Callable function should receive as input a Perceptron instance, current sample and
+            current response
         """
         super().__init__()
         self.include_intercept_ = include_intercept
@@ -58,8 +61,8 @@ class Perceptron(BaseEstimator):
 
     def _fit(self, X: np.ndarray, y: np.ndarray) -> NoReturn:
         """
-        Fit a halfspace to to given samples. Iterate over given data as long as there exists a sample misclassified
-        or that did not reach `self.max_iter_`
+        Fit a halfspace to given samples. Iterate over given data as long as there exists a
+        sample misclassified or that did not reach `self.max_iter_`
 
         Parameters
         ----------
@@ -73,7 +76,22 @@ class Perceptron(BaseEstimator):
         -----
         Fits model with or without an intercept depending on value of `self.fit_intercept_`
         """
-        raise NotImplementedError()
+
+        new_x = X.copy()
+        if self.include_intercept_:
+            new_x = np.insert(new_x, 0, 1, axis=1)
+        n_samples, n_features = new_x.shape
+
+        w = np.zeros(n_features)
+        t = 0
+        while t < self.max_iter_ and t < n_samples:
+            w, index = self._next_w(new_x, y, w)
+            self.coefs_ = w
+            if index == -1:
+                break
+            self.fitted_ = True  # todo here?? if i delete this then cb cant call loss func
+            self.callback_(self, new_x[index, :], y[index])
+            t += 1
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -89,7 +107,11 @@ class Perceptron(BaseEstimator):
         responses : ndarray of shape (n_samples, )
             Predicted responses of given samples
         """
-        raise NotImplementedError()
+
+        new_x = X.copy()
+        if self.include_intercept_:
+            new_x = np.insert(new_x, 0, 1, axis=1)
+        return np.sign(new_x @ self.coefs_)
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """
@@ -109,4 +131,15 @@ class Perceptron(BaseEstimator):
             Performance under missclassification loss function
         """
         from ...metrics import misclassification_error
-        raise NotImplementedError()
+
+        return misclassification_error(y, self._predict(X))
+
+    def _next_w(self, new_x, y, w):
+        ywx = y * (new_x @ w.T)
+        for i, ywxi in enumerate(ywx):
+            # for i in range(new_x.shape[0]):  # n_samples
+            #     ywxi = y[i] * (w @ new_x[i])  # this does the same as to 2 prev lines
+            if ywxi <= 0:
+                w += y[i] * new_x[i]
+                return w, i
+        return w, -1
