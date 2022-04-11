@@ -87,10 +87,13 @@ def compare_gaussian_classifiers():
     """
     for f in ["gaussian1.npy", "gaussian2.npy"]:
         # Load dataset
-        raise NotImplementedError()
+        # raise NotImplementedError()
+        x, y = load_dataset(f"./../datasets/{f}")
 
         # Fit models and predict over training set
-        raise NotImplementedError()
+        # raise NotImplementedError()
+        lda = LDA()
+        lda.fit(x, y)
 
         # Plot a figure with two suplots, showing the Gaussian Naive Bayes predictions on the left
         # and LDA predictions on the right. Plot title should specify dataset used and subplot titles

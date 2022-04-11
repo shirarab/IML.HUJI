@@ -17,14 +17,15 @@ class LDA(BaseEstimator):
         The estimated features means for each class. To be set in `LDA.fit`
 
     self.cov_ : np.ndarray of shape (n_features,n_features)
-        The estimated features covariance. To be set in `LDA.fit`
+        The estimated features' covariance. To be set in `LDA.fit`
 
     self._cov_inv : np.ndarray of shape (n_features,n_features)
-        The inverse of the estimated features covariance. To be set in `LDA.fit`
+        The inverse of the estimated features' covariance. To be set in `LDA.fit`
 
     self.pi_: np.ndarray of shape (n_classes)
         The estimated class probabilities. To be set in `GaussianNaiveBayes.fit`
     """
+
     def __init__(self):
         """
         Instantiate an LDA classifier
@@ -46,7 +47,25 @@ class LDA(BaseEstimator):
         y : ndarray of shape (n_samples, )
             Responses of input data to fit to
         """
-        raise NotImplementedError()
+
+        n_samples, n_features = X.shape
+        self.classes_, nk = np.unique(ar=y, return_counts=True)
+        self.pi_ = nk / n_samples
+
+        k_idx = {k: (y == k).nonzero()[0] for k in self.classes_}
+        mu = []
+        sigma = np.zeros((n_features, n_features))
+        j = 0
+        for k, idxs in k_idx.items():
+            xi = X[idxs]
+            muk = np.sum(xi) / nk[j]  # same as np.sum(xi) / len(idxs)
+            mu.append(muk)
+            xi_centered = xi - muk
+            sigma += (xi_centered.T @ xi_centered)
+            j += 1
+        self.mu_ = np.array(mu)
+        self.cov_ = sigma / n_samples
+        self._cov_inv = inv(self.cov_)
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """

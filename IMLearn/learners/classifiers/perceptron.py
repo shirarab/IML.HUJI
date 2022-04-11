@@ -84,7 +84,7 @@ class Perceptron(BaseEstimator):
 
         w = np.zeros(n_features)
         t = 0
-        while t < self.max_iter_ and t < n_samples:
+        while t < self.max_iter_:
             w, index = self._next_w(new_x, y, w)
             self.coefs_ = w
             if index == -1:
@@ -137,8 +137,6 @@ class Perceptron(BaseEstimator):
     def _next_w(self, new_x, y, w):
         ywx = y * (new_x @ w.T)
         for i, ywxi in enumerate(ywx):
-            # for i in range(new_x.shape[0]):  # n_samples
-            #     ywxi = y[i] * (w @ new_x[i])  # this does the same as to 2 prev lines
             if ywxi <= 0:
                 w += y[i] * new_x[i]
                 return w, i
