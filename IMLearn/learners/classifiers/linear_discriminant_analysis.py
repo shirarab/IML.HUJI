@@ -58,10 +58,9 @@ class LDA(BaseEstimator):
         j = 0
         for k, idxs in k_idx.items():
             xi = X[idxs]
-            muk = np.sum(xi) / nk[j]  # same as np.sum(xi) / len(idxs)
+            muk = np.sum(xi, axis=0) / nk[j]  # same as np.sum(xi) / len(idxs)
             mu.append(muk)
-            xi_centered = xi - muk
-            sigma += (xi_centered.T @ xi_centered)
+            sigma += ((xi - muk).T @ (xi - muk))
             j += 1
         self.mu_ = np.array(mu)
         self.cov_ = sigma / n_samples
@@ -81,7 +80,17 @@ class LDA(BaseEstimator):
         responses : ndarray of shape (n_samples, )
             Predicted responses of given samples
         """
-        raise NotImplementedError()
+
+        y_hat = []
+        for xi in X:
+            pred_cls = self.classes_[0]
+            max_prob = -np.inf
+            for cls, prob in self._helper_predict_xi(xi).items():
+                if prob > max_prob:
+                    max_prob = prob
+                    pred_cls = cls
+            y_hat.append(pred_cls)
+        return np.array(y_hat)
 
     def likelihood(self, X: np.ndarray) -> np.ndarray:
         """
@@ -102,6 +111,7 @@ class LDA(BaseEstimator):
             raise ValueError("Estimator must first be fitted before calling `likelihood` function")
 
         raise NotImplementedError()
+        
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """
@@ -122,3 +132,13 @@ class LDA(BaseEstimator):
         """
         from ...metrics import misclassification_error
         raise NotImplementedError()
+
+    # todo check if can add helper function. if not- the put it as mekunan function of predict.
+    def _helper_predict_xi(self, xi):
+        class_prob = {}
+        for i, k in enumerate(self.classes_):
+            ak = self._cov_inv @ self.mu_[i]
+            bk = np.log(self.pi_[i]) - 0.5 * self.mu_[i] @ self._cov_inv @ self.mu_[i]
+            dk = ak.T @ xi + bk  # dk:=distribution of k
+            class_prob[k] = dk
+        return class_prob
