@@ -87,24 +87,49 @@ def compare_gaussian_classifiers():
     """
     for f in ["gaussian1.npy", "gaussian2.npy"]:
         # Load dataset
-        # raise NotImplementedError()
         x, y = load_dataset(f"./../datasets/{f}")
 
         # Fit models and predict over training set
-        # raise NotImplementedError()
+        from IMLearn.metrics import accuracy
         lda = LDA()
         lda.fit(x, y)
+        lda_prediction = lda.predict(x)
+        lda_accuracy = accuracy(y, lda_prediction)
+        lda_mean = lda.mu_
+
+        naive_bayes = GaussianNaiveBayes()
+        naive_bayes.fit(x, y)
+        nb_prediction = naive_bayes.predict(x)
+        nb_accuracy = accuracy(y, nb_prediction)
+        nb_mean = naive_bayes.mu_
 
         # Plot a figure with two suplots, showing the Gaussian Naive Bayes predictions on the left
         # and LDA predictions on the right. Plot title should specify dataset used and subplot titles
-        # should specify algorithm and accuracy
+        # should specify algorithm and accuracy. The subplots are with accuracy and have traces for
+        # data-points setting symbols and colors
 
-        # Create subplots
-        from IMLearn.metrics import accuracy
-        raise NotImplementedError()
+        n = f.split('.')[0].capitalize()  # dataset name
 
-        # Add traces for data-points setting symbols and colors
-        raise NotImplementedError()
+        subplot_titles = [f"Naive Bayes Prediction with {'%.3f' % nb_accuracy} accuracy",
+                          f"LDA Prediction with {'%.3f' % lda_accuracy} accuracy"]
+        fig = make_subplots(rows=1, cols=2, subplot_titles=subplot_titles) \
+            .add_trace(go.Scatter(x=x[:, 0], y=x[:, 1], mode="markers", showlegend=False,
+                                  marker=dict(color=nb_prediction, symbol=y)),
+                       row=1, col=1) \
+            .add_trace(go.Scatter(x=x[:, 0], y=x[:, 1], mode="markers", showlegend=False,
+                                  marker=dict(color=lda_prediction, symbol=y)),
+                       row=1, col=2)
+        fig.update_layout(dict(title=f"Compare Classifiers Predicted Classes over {n} Dataset"))
+        fig.show()
+
+        continue
+
+        # print(np.unique(lda_y_hat == y, return_counts=True))
+        # lda_lh = lda.likelihood(x)
+        # print(lda_lh)
+        # print(np.unique(nb_y_hat == y, return_counts=True))
+        # nb_lh = naive_bayes.likelihood(x)
+        # print(nb_lh)
 
         # Add `X` dots specifying fitted Gaussians' means
         raise NotImplementedError()

@@ -4,6 +4,9 @@ import numpy as np
 from numpy.linalg import det, inv
 
 
+from sklearn.naive_bayes import GaussianNB
+
+
 class LDA(BaseEstimator):
     """
     Linear Discriminant Analysis (LDA) classifier
@@ -58,12 +61,12 @@ class LDA(BaseEstimator):
         j = 0
         for k, idxs in k_idx.items():
             xi = X[idxs]
-            muk = np.sum(xi, axis=0) / nk[j]  # same as np.sum(xi) / len(idxs)
-            mu.append(muk)
-            sigma += ((xi - muk).T @ (xi - muk))
+            mu_k = np.sum(xi, axis=0) / nk[j]  # same as np.sum(xi) / len(idxs)
+            mu.append(mu_k)
+            sigma += ((xi - mu_k).T @ (xi - mu_k))
             j += 1
         self.mu_ = np.array(mu)
-        self.cov_ = sigma / n_samples
+        self.cov_ = sigma / (n_samples - len(self.classes_))  # assuming unbiased estimator
         self._cov_inv = inv(self.cov_)
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
@@ -83,13 +86,7 @@ class LDA(BaseEstimator):
 
         y_hat = []
         for xi in X:
-            pred_cls = self.classes_[0]
-            max_prob = -np.inf
-            for cls, prob in self._helper_predict_xi(xi).items():
-                if prob > max_prob:
-                    max_prob = prob
-                    pred_cls = cls
-            y_hat.append(pred_cls)
+            y_hat.append(self.__argmax_k(xi))
         return np.array(y_hat)
 
     def likelihood(self, X: np.ndarray) -> np.ndarray:
@@ -110,8 +107,20 @@ class LDA(BaseEstimator):
         if not self.fitted_:
             raise ValueError("Estimator must first be fitted before calling `likelihood` function")
 
-        raise NotImplementedError()
-        
+        # raise NotImplementedError()
+        n_samples, n_features = X.shape
+        denominator = np.sqrt(np.power(2 * np.pi, n_features) * det(self.cov_))  # √((2π)^d*|Σ|)
+        # N(xi|muk,Σ) * Mult(yi|pi)
+        likelihoods = []
+        for j, k in enumerate(self.classes_):
+            muk = self.mu_[j]
+            x_centered = X - muk.T
+            k_likelihood = []
+            for x in x_centered:
+                exp = np.exp(-0.5 * x.T @ self._cov_inv @ x)
+                k_likelihood.append(exp / denominator)  # todo change: exp * muk / denominator????
+            likelihoods.append(k_likelihood)
+        return np.array(likelihoods).T
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """
@@ -131,14 +140,19 @@ class LDA(BaseEstimator):
             Performance under missclassification loss function
         """
         from ...metrics import misclassification_error
-        raise NotImplementedError()
+
+        return misclassification_error(y, self._predict(X))
 
     # todo check if can add helper function. if not- the put it as mekunan function of predict.
-    def _helper_predict_xi(self, xi):
-        class_prob = {}
+    def __argmax_k(self, xi):
+        max_k = None  # self.classes_[0]
+        max_prob = -np.inf
         for i, k in enumerate(self.classes_):
-            ak = self._cov_inv @ self.mu_[i]
-            bk = np.log(self.pi_[i]) - 0.5 * self.mu_[i] @ self._cov_inv @ self.mu_[i]
-            dk = ak.T @ xi + bk  # dk:=distribution of k
-            class_prob[k] = dk
-        return class_prob
+            mu_k, pi_k = self.mu_[i], self.pi_[i]
+            ak = self._cov_inv @ mu_k
+            bk = np.log(pi_k) - 0.5 * mu_k @ self._cov_inv @ mu_k
+            prob = ak.T @ xi + bk  # :=distribution of k
+            if prob > max_prob:
+                max_prob = prob
+                max_k = k
+        return max_k
