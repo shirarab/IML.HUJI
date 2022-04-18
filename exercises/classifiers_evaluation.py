@@ -81,6 +81,28 @@ def get_ellipse(mu: np.ndarray, cov: np.ndarray):
     return go.Scatter(x=mu[0] + xs, y=mu[1] + ys, mode="lines", marker_color="black")
 
 
+def add_cov_ellipses(fig, lda, naive_bayes):
+    # Add ellipses depicting the covariances of the fitted Gaussians
+    for i, mu in enumerate(naive_bayes.mu_):
+        fig.add_trace(get_ellipse(mu, np.diag(naive_bayes.vars_[i])),  # showlegend=False,
+                      row=1, col=1)
+    for i, mu in enumerate(lda.mu_):
+        fig.add_trace(get_ellipse(mu, lda.cov_),  # showlegend=False,
+                      row=1, col=2)
+    return fig
+
+
+def add_fitted_means(fig, lda, naive_bayes):
+    # Add `X` dots specifying fitted Gaussians' means
+    fig.add_trace(go.Scatter(x=naive_bayes.mu_[:, 0], y=naive_bayes.mu_[:, 1],
+                             mode="markers", marker=dict(color='red', symbol='x')),
+                  row=1, col=1)
+    fig.add_trace(go.Scatter(x=lda.mu_[:, 0], y=lda.mu_[:, 1],
+                             mode="markers", marker=dict(color='red', symbol='x')),
+                  row=1, col=2)
+    return fig
+
+
 def compare_gaussian_classifiers():
     """
     Fit both Gaussian Naive Bayes and LDA classifiers on both gaussians1 and gaussians2 datasets
@@ -95,13 +117,11 @@ def compare_gaussian_classifiers():
         lda.fit(x, y)
         lda_prediction = lda.predict(x)
         lda_accuracy = accuracy(y, lda_prediction)
-        lda_mean = lda.mu_
 
         naive_bayes = GaussianNaiveBayes()
         naive_bayes.fit(x, y)
         nb_prediction = naive_bayes.predict(x)
         nb_accuracy = accuracy(y, nb_prediction)
-        nb_mean = naive_bayes.mu_
 
         # Plot a figure with two suplots, showing the Gaussian Naive Bayes predictions on the left
         # and LDA predictions on the right. Plot title should specify dataset used and subplot titles
@@ -113,29 +133,21 @@ def compare_gaussian_classifiers():
         subplot_titles = [f"Naive Bayes Prediction with {'%.3f' % nb_accuracy} accuracy",
                           f"LDA Prediction with {'%.3f' % lda_accuracy} accuracy"]
         fig = make_subplots(rows=1, cols=2, subplot_titles=subplot_titles) \
-            .add_trace(go.Scatter(x=x[:, 0], y=x[:, 1], mode="markers", showlegend=False,
+            .add_trace(go.Scatter(x=x[:, 0], y=x[:, 1], mode="markers",
                                   marker=dict(color=nb_prediction, symbol=y)),
                        row=1, col=1) \
-            .add_trace(go.Scatter(x=x[:, 0], y=x[:, 1], mode="markers", showlegend=False,
+            .add_trace(go.Scatter(x=x[:, 0], y=x[:, 1], mode="markers",
                                   marker=dict(color=lda_prediction, symbol=y)),
                        row=1, col=2)
-        fig.update_layout(dict(title=f"Compare Classifiers Predicted Classes over {n} Dataset"))
-        fig.show()
-
-        continue
-
-        # print(np.unique(lda_y_hat == y, return_counts=True))
-        # lda_lh = lda.likelihood(x)
-        # print(lda_lh)
-        # print(np.unique(nb_y_hat == y, return_counts=True))
-        # nb_lh = naive_bayes.likelihood(x)
-        # print(nb_lh)
 
         # Add `X` dots specifying fitted Gaussians' means
-        raise NotImplementedError()
+        fig = add_fitted_means(fig, lda, naive_bayes)
 
         # Add ellipses depicting the covariances of the fitted Gaussians
-        raise NotImplementedError()
+        fig = add_cov_ellipses(fig, lda, naive_bayes)
+        fig.update_layout(dict(title=f"Compare Classifiers Predicted Classes over {n} Dataset"),
+                          showlegend=False)
+        fig.show()
 
 
 if __name__ == '__main__':

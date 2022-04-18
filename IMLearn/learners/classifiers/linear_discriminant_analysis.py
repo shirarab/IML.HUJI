@@ -4,9 +4,6 @@ import numpy as np
 from numpy.linalg import det, inv
 
 
-from sklearn.naive_bayes import GaussianNB
-
-
 class LDA(BaseEstimator):
     """
     Linear Discriminant Analysis (LDA) classifier
@@ -107,19 +104,11 @@ class LDA(BaseEstimator):
         if not self.fitted_:
             raise ValueError("Estimator must first be fitted before calling `likelihood` function")
 
-        # raise NotImplementedError()
-        n_samples, n_features = X.shape
-        denominator = np.sqrt(np.power(2 * np.pi, n_features) * det(self.cov_))  # √((2π)^d*|Σ|)
         # N(xi|muk,Σ) * Mult(yi|pi)
         likelihoods = []
         for j, k in enumerate(self.classes_):
-            muk = self.mu_[j]
-            x_centered = X - muk.T
-            k_likelihood = []
-            for x in x_centered:
-                exp = np.exp(-0.5 * x.T @ self._cov_inv @ x)
-                k_likelihood.append(exp / denominator)  # todo change: exp * muk / denominator????
-            likelihoods.append(k_likelihood)
+            mu_k = self.mu_[j]
+            likelihoods.append(LDA.likelihood_k(X, mu_k, self.cov_))
         return np.array(likelihoods).T
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
@@ -156,3 +145,14 @@ class LDA(BaseEstimator):
                 max_prob = prob
                 max_k = k
         return max_k
+
+    @staticmethod
+    def likelihood_k(X, mu_k, cov):
+        n_features = X.shape[1]  # or: n_samples, n_features = X.shape
+        denominator = np.sqrt(np.power(2 * np.pi, n_features) * det(cov))  # √((2π)^d*|Σ|)
+        x_centered = X - mu_k.T
+        k_likelihood = []
+        for x in x_centered:
+            exp = np.exp(-0.5 * x.T @ inv(cov) @ x)
+            k_likelihood.append(exp / denominator)  # todo change: exp * muk / denominator????
+        return k_likelihood

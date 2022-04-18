@@ -2,6 +2,8 @@ from typing import NoReturn
 from ...base import BaseEstimator
 import numpy as np
 
+from .linear_discriminant_analysis import LDA
+
 
 class GaussianNaiveBayes(BaseEstimator):
     """
@@ -98,7 +100,12 @@ class GaussianNaiveBayes(BaseEstimator):
         if not self.fitted_:
             raise ValueError("Estimator must first be fitted before calling `likelihood` function")
 
-        raise NotImplementedError()
+        likelihoods = []
+        for j, k in enumerate(self.classes_):
+            mu_k = self.mu_[j]
+            var_k = np.diag(self.vars_[j])
+            likelihoods.append(LDA.likelihood_k(X, mu_k, var_k))
+        return np.array(likelihoods).T
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """
