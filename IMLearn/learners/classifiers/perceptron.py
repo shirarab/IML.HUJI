@@ -85,7 +85,6 @@ class Perceptron(BaseEstimator):
         self.coefs_ = np.zeros(n_features)
         t = 0
         self.fitted_ = True
-        self.callback_(self, new_x[0, :], y[0])  # todo check if need this here or not
         while t < self.max_iter_:
             index = self.__update_next_w(new_x, y, self.coefs_)
             if index == -1:
