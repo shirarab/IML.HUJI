@@ -43,7 +43,7 @@ class GaussianNaiveBayes(BaseEstimator):
         y : ndarray of shape (n_samples, )
             Responses of input data to fit to
         """
-        # todo same as LDA.fit except for self.cov_,self._cov_inv <=> self.vars_
+
         n_samples = X.shape[0]
         self.classes_, nk = np.unique(ar=y, return_counts=True)
         self.pi_ = nk / n_samples
@@ -75,11 +75,13 @@ class GaussianNaiveBayes(BaseEstimator):
         responses : ndarray of shape (n_samples, )
             Predicted responses of given samples
         """
-        # raise NotImplementedError()
-        # todo same as LDA.predict
+
         y_hat = []
-        for xi in X:
-            y_hat.append(self.__argmax_k(xi))
+        likeli = self.likelihood(X)  # P(x|y)
+        for i, xi in enumerate(X):
+            p_xi = self.pi_ @ likeli[i]
+            max_k = np.argmax(likeli[i] * self.pi_ / p_xi)  # argmax P(x|y)*P(y)/P(X)
+            y_hat.append(max_k)
         return np.array(y_hat)
 
     def likelihood(self, X: np.ndarray) -> np.ndarray:
@@ -127,18 +129,3 @@ class GaussianNaiveBayes(BaseEstimator):
         from ...metrics import misclassification_error
 
         return misclassification_error(y, self._predict(X))
-
-    # todo check if can add helper function. if not- the put it as mekunan function of predict.
-    #  also same as LDA.__argmax_k except for self._cov_inv <=> self.vars_
-    def __argmax_k(self, xi):
-        max_k = None  # self.classes_[0]
-        max_prob = -np.inf
-        for i, k in enumerate(self.classes_):
-            mu_k, pi_k, var_k = self.mu_[i], self.pi_[i], self.vars_[i]
-            ak = var_k * mu_k
-            bk = np.log(pi_k) - 0.5 * mu_k * var_k @ mu_k
-            prob = ak.T @ xi + bk  # :=distribution of k
-            if prob > max_prob:
-                max_prob = prob
-                max_k = k
-        return max_k

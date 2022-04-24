@@ -82,14 +82,14 @@ class Perceptron(BaseEstimator):
             new_x = np.insert(new_x, 0, 1, axis=1)
         n_samples, n_features = new_x.shape
 
-        w = np.zeros(n_features)
+        self.coefs_ = np.zeros(n_features)
         t = 0
+        self.fitted_ = True
+        self.callback_(self, new_x[0, :], y[0])  # todo check if need this here or not
         while t < self.max_iter_:
-            w, index = self.__next_w(new_x, y, w)
-            self.coefs_ = w
+            index = self.__update_next_w(new_x, y, self.coefs_)
             if index == -1:
                 break
-            self.fitted_ = True  # todo here?? if i delete this then cb cant call loss func
             self.callback_(self, new_x[index, :], y[index])
             t += 1
 
@@ -134,10 +134,10 @@ class Perceptron(BaseEstimator):
 
         return misclassification_error(y, self._predict(X))
 
-    def __next_w(self, new_x, y, w):
+    def __update_next_w(self, new_x, y, w):
         ywx = y * (new_x @ w.T)
         for i, ywxi in enumerate(ywx):
             if ywxi <= 0:
                 w += y[i] * new_x[i]
-                return w, i
-        return w, -1
+                return i
+        return -1
