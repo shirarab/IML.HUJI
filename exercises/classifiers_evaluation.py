@@ -81,20 +81,18 @@ def get_ellipse(mu: np.ndarray, cov: np.ndarray):
     return go.Scatter(x=mu[0] + xs, y=mu[1] + ys, mode="lines", marker_color="black")
 
 
-def add_cov_ellipses(fig, lda, naive_bayes):
+def add_cov_ellipses(fig, lda, gnb):
     # Add ellipses depicting the covariances of the fitted Gaussians
-    for i, mu in enumerate(naive_bayes.mu_):
-        fig.add_trace(get_ellipse(mu, np.diag(naive_bayes.vars_[i])),  # showlegend=False,
-                      row=1, col=1)
+    for i, mu in enumerate(gnb.mu_):
+        fig.add_trace(get_ellipse(mu, np.diag(gnb.vars_[i])), row=1, col=1)
     for i, mu in enumerate(lda.mu_):
-        fig.add_trace(get_ellipse(mu, lda.cov_),  # showlegend=False,
-                      row=1, col=2)
+        fig.add_trace(get_ellipse(mu, lda.cov_), row=1, col=2)
     return fig
 
 
-def add_fitted_means(fig, lda, naive_bayes):
+def add_fitted_means(fig, lda, gnb):
     # Add `X` dots specifying fitted Gaussians' means
-    fig.add_trace(go.Scatter(x=naive_bayes.mu_[:, 0], y=naive_bayes.mu_[:, 1],
+    fig.add_trace(go.Scatter(x=gnb.mu_[:, 0], y=gnb.mu_[:, 1],
                              mode="markers", marker=dict(color='black', symbol='x')),
                   row=1, col=1)
     fig.add_trace(go.Scatter(x=lda.mu_[:, 0], y=lda.mu_[:, 1],
@@ -118,10 +116,10 @@ def compare_gaussian_classifiers():
         lda_prediction = lda.predict(x)
         lda_accuracy = accuracy(y, lda_prediction)
 
-        naive_bayes = GaussianNaiveBayes()
-        naive_bayes.fit(x, y)
-        nb_prediction = naive_bayes.predict(x)
-        nb_accuracy = accuracy(y, nb_prediction)
+        gnb = GaussianNaiveBayes()
+        gnb.fit(x, y)
+        gnb_prediction = gnb.predict(x)
+        gnb_accuracy = accuracy(y, gnb_prediction)
 
         # Plot a figure with two suplots, showing the Gaussian Naive Bayes predictions on the left
         # and LDA predictions on the right. Plot title should specify dataset used and subplot titles
@@ -130,21 +128,21 @@ def compare_gaussian_classifiers():
 
         n = f.split('.')[0].capitalize()  # dataset name
 
-        subplot_titles = [f"Naive Bayes Prediction with {'%.3f' % nb_accuracy} accuracy",
+        subplot_titles = [f"Naive Bayes Prediction with {'%.3f' % gnb_accuracy} accuracy",
                           f"LDA Prediction with {'%.3f' % lda_accuracy} accuracy"]
         fig = make_subplots(rows=1, cols=2, subplot_titles=subplot_titles) \
             .add_trace(go.Scatter(x=x[:, 0], y=x[:, 1], mode="markers",
-                                  marker=dict(color=nb_prediction, symbol=y * 2)),
+                                  marker=dict(color=gnb_prediction, symbol=y * 2)),
                        row=1, col=1) \
             .add_trace(go.Scatter(x=x[:, 0], y=x[:, 1], mode="markers",
                                   marker=dict(color=lda_prediction, symbol=y * 2)),
                        row=1, col=2)
 
         # Add `X` dots specifying fitted Gaussians' means
-        fig = add_fitted_means(fig, lda, naive_bayes)
+        fig = add_fitted_means(fig, lda, gnb)
 
         # Add ellipses depicting the covariances of the fitted Gaussians
-        fig = add_cov_ellipses(fig, lda, naive_bayes)
+        fig = add_cov_ellipses(fig, lda, gnb)
         fig.update_layout(dict(title=f"Compare Classifiers Predicted Classes over {n} Dataset"),
                           showlegend=False)
         fig.show()

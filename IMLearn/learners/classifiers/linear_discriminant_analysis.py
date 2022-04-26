@@ -147,7 +147,7 @@ class LDA(BaseEstimator):
     def get_prediction_helper(X, likeli, pi):
         y_hat = []
         for i, xi in enumerate(X):
-            p_xi = pi @ likeli[i]
+            p_xi = pi @ likeli[i]  # P(X)
             max_k = np.argmax(likeli[i] * pi / p_xi)  # argmax P(x|y)*P(y)/P(X)
             y_hat.append(max_k)
         return np.array(y_hat)
