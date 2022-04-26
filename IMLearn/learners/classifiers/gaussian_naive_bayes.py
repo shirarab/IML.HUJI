@@ -76,13 +76,8 @@ class GaussianNaiveBayes(BaseEstimator):
             Predicted responses of given samples
         """
 
-        y_hat = []
         likeli = self.likelihood(X)  # P(x|y)
-        for i, xi in enumerate(X):
-            p_xi = self.pi_ @ likeli[i]
-            max_k = np.argmax(likeli[i] * self.pi_ / p_xi)  # argmax P(x|y)*P(y)/P(X)
-            y_hat.append(max_k)
-        return np.array(y_hat)
+        return LDA.get_prediction_helper(X, likeli, self.pi_)  # array of argmax P(x|y)*P(y)/P(X)
 
     def likelihood(self, X: np.ndarray) -> np.ndarray:
         """
@@ -106,7 +101,7 @@ class GaussianNaiveBayes(BaseEstimator):
         for j, k in enumerate(self.classes_):
             mu_k = self.mu_[j]
             var_k = np.diag(self.vars_[j])
-            likelihoods.append(LDA.likelihood_k(X, mu_k, var_k))
+            likelihoods.append(np.array(LDA.gaussian_likelihood_k(X, mu_k, var_k)))
         return np.array(likelihoods).T
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:

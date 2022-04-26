@@ -52,6 +52,8 @@ class LDA(BaseEstimator):
         self.classes_, nk = np.unique(ar=y, return_counts=True)
         self.pi_ = nk / n_samples
 
+        # k_idx is a dictionary s.t. for each class k the value is an array of all the
+        # indexes that it appears at.
         k_idx = {k: (y == k).nonzero()[0] for k in self.classes_}
         mu = []
         sigma = np.zeros((n_features, n_features))
@@ -81,10 +83,8 @@ class LDA(BaseEstimator):
             Predicted responses of given samples
         """
 
-        y_hat = []
-        for xi in X:
-            y_hat.append(self.__argmax_k(xi))
-        return np.array(y_hat)
+        likeli = self.likelihood(X)  # P(x|y)
+        return LDA.get_prediction_helper(X, likeli, self.pi_)  # array of argmax P(x|y)*P(y)/P(X)
 
     def likelihood(self, X: np.ndarray) -> np.ndarray:
         """
@@ -104,11 +104,11 @@ class LDA(BaseEstimator):
         if not self.fitted_:
             raise ValueError("Estimator must first be fitted before calling `likelihood` function")
 
-        # N(xi|muk,Σ) * Mult(yi|pi)
+        # N(xi|muk,Σ) ------ not N(xi|muk,Σ) * Mult(yi|pik)
         likelihoods = []
         for j, k in enumerate(self.classes_):
-            mu_k = self.mu_[j]
-            likelihoods.append(LDA.likelihood_k(X, mu_k, self.cov_))
+            mu_k, pi_k = self.mu_[j], self.pi_[j]
+            likelihoods.append(np.array(LDA.gaussian_likelihood_k(X, mu_k, self.cov_)))
         return np.array(likelihoods).T
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
@@ -132,27 +132,22 @@ class LDA(BaseEstimator):
 
         return misclassification_error(y, self._predict(X))
 
-    # todo check if can add helper function. if not- the put it as mekunan function of predict.
-    def __argmax_k(self, xi):
-        max_k = None  # self.classes_[0]
-        max_prob = -np.inf
-        for i, k in enumerate(self.classes_):
-            mu_k, pi_k = self.mu_[i], self.pi_[i]
-            ak = self._cov_inv @ mu_k
-            bk = np.log(pi_k) - 0.5 * mu_k @ self._cov_inv @ mu_k
-            prob = ak.T @ xi + bk  # :=distribution of k
-            if prob > max_prob:
-                max_prob = prob
-                max_k = k
-        return max_k
-
     @staticmethod
-    def likelihood_k(X, mu_k, cov):
+    def gaussian_likelihood_k(X, mu_k, cov):
         n_features = X.shape[1]  # or: n_samples, n_features = X.shape
         denominator = np.sqrt(np.power(2 * np.pi, n_features) * det(cov))  # √((2π)^d*|Σ|)
         x_centered = X - mu_k.T
         k_likelihood = []
         for x in x_centered:
             exp = np.exp(-0.5 * x.T @ inv(cov) @ x)
-            k_likelihood.append(exp / denominator)  # todo change: exp * muk / denominator????
+            k_likelihood.append(exp / denominator)
         return k_likelihood
+
+    @staticmethod
+    def get_prediction_helper(X, likeli, pi):
+        y_hat = []
+        for i, xi in enumerate(X):
+            p_xi = pi @ likeli[i]
+            max_k = np.argmax(likeli[i] * pi / p_xi)  # argmax P(x|y)*P(y)/P(X)
+            y_hat.append(max_k)
+        return np.array(y_hat)

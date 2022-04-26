@@ -95,10 +95,10 @@ def add_cov_ellipses(fig, lda, naive_bayes):
 def add_fitted_means(fig, lda, naive_bayes):
     # Add `X` dots specifying fitted Gaussians' means
     fig.add_trace(go.Scatter(x=naive_bayes.mu_[:, 0], y=naive_bayes.mu_[:, 1],
-                             mode="markers", marker=dict(color='red', symbol='x')),
+                             mode="markers", marker=dict(color='black', symbol='x')),
                   row=1, col=1)
     fig.add_trace(go.Scatter(x=lda.mu_[:, 0], y=lda.mu_[:, 1],
-                             mode="markers", marker=dict(color='red', symbol='x')),
+                             mode="markers", marker=dict(color='black', symbol='x')),
                   row=1, col=2)
     return fig
 
@@ -134,10 +134,10 @@ def compare_gaussian_classifiers():
                           f"LDA Prediction with {'%.3f' % lda_accuracy} accuracy"]
         fig = make_subplots(rows=1, cols=2, subplot_titles=subplot_titles) \
             .add_trace(go.Scatter(x=x[:, 0], y=x[:, 1], mode="markers",
-                                  marker=dict(color=nb_prediction, symbol=y)),
+                                  marker=dict(color=nb_prediction, symbol=y * 2)),
                        row=1, col=1) \
             .add_trace(go.Scatter(x=x[:, 0], y=x[:, 1], mode="markers",
-                                  marker=dict(color=lda_prediction, symbol=y)),
+                                  marker=dict(color=lda_prediction, symbol=y * 2)),
                        row=1, col=2)
 
         # Add `X` dots specifying fitted Gaussians' means

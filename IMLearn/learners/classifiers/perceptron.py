@@ -86,7 +86,7 @@ class Perceptron(BaseEstimator):
         t = 0
         self.fitted_ = True
         while t < self.max_iter_:
-            index = self.__update_next_w(new_x, y, self.coefs_)
+            index = self.__update_next_w(new_x, y)  # updates self.coefs_
             if index == -1:
                 break
             self.callback_(self, new_x[index, :], y[index])
@@ -133,10 +133,10 @@ class Perceptron(BaseEstimator):
 
         return misclassification_error(y, self._predict(X))
 
-    def __update_next_w(self, new_x, y, w):
-        ywx = y * (new_x @ w.T)
+    def __update_next_w(self, new_x, y):
+        ywx = y * (new_x @ self.coefs_.T)
         for i, ywxi in enumerate(ywx):
             if ywxi <= 0:
-                w += y[i] * new_x[i]
+                self.coefs_ += y[i] * new_x[i]
                 return i
         return -1
