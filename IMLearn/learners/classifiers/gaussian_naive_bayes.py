@@ -55,7 +55,7 @@ class GaussianNaiveBayes(BaseEstimator):
             xi = X[idxs]
             mu_k = np.sum(xi, axis=0) / nk[j]  # same as np.sum(xi) / len(idxs)
             mu.append(mu_k)
-            var_k = np.sum((xi - mu_k) ** 2, axis=0) / (nk[j] - 1)
+            var_k = np.sum((xi - mu_k) ** 2, axis=0) / nk[j]  # or the unbiased (nk[j] - 1)
             var.append(var_k)
             j += 1
         self.mu_ = np.array(mu)

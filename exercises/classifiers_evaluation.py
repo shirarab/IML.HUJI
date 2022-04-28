@@ -147,8 +147,30 @@ def compare_gaussian_classifiers():
                           showlegend=False)
         fig.show()
 
+"""
+def quiz():
+    # q1
+    # S = {(0, 0), (1, 0), (2, 1), (3, 1), (4, 1), (5, 1), (6, 2), (7, 2)}
+    x = np.array([0, 1, 2, 3, 4, 5, 6, 7])
+    y = np.array([0, 0, 1, 1, 1, 1, 2, 2])
+    naive_bayes = GaussianNaiveBayes()
+    naive_bayes.fit(x, y)
+    print(naive_bayes.pi_)
+    print(naive_bayes.mu_)
+
+    # q2
+    # S = {([1, 1], 0), ([1, 2], 0), ([2, 3], 1), ([2, 4], 1), ([3, 3], 1), ([3, 4], 1)}
+    x = np.array([[1, 1], [1, 2], [2, 3], [2, 4], [3, 3], [3, 4]])
+    y = np.array([0, 0, 1, 1, 1, 1])
+    naive_bayes2 = GaussianNaiveBayes()
+    naive_bayes2.fit(x, y)
+    print(naive_bayes2.pi_)
+    print(naive_bayes2.mu_)
+    print(naive_bayes2.vars_)
+"""
 
 if __name__ == '__main__':
     np.random.seed(0)
+    # quiz()
     run_perceptron()
     compare_gaussian_classifiers()
