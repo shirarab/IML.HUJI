@@ -42,14 +42,14 @@ class DecisionStump(BaseEstimator):
             Responses of input data to fit to
         """
 
-        n_samples, n_features = X.shape
-        mle = np.inf
-        sign_feature_iter = product([-1, 1], range(n_features))
+        min_loss = np.inf
+        self.threshold_, self.j_, self.sign_ = 0, 0, 1
+        sign_feature_iter = product([-1, 1], range(X.shape[1]))
         for sign, j_feature in sign_feature_iter:
-            thr, thr_err = self._find_threshold(X[:, j_feature], y, sign)
-            if thr_err < mle:
-                mle = thr_err
-                self.threshold_, self.j_, self.sign_ = thr, j_feature, sign
+            thr, new_loss = self._find_threshold(X[:, j_feature], y, sign)
+            if new_loss < min_loss:
+                min_loss = new_loss
+                self.threshold_, self.j_, self.sign_ = thr, j_feature, sign  #sign* y[j_feature]
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -71,7 +71,7 @@ class DecisionStump(BaseEstimator):
         to or above the threshold are predicted as `sign`
         """
 
-        y_hat = (X[:self.j_] >= self.threshold_).astype(int)  # 0s, 1s
+        y_hat = (X[:, self.j_] >= self.threshold_).astype(int)  # 0s, 1s
         y_hat = y_hat * 2 - 1  # 0-1=-1s, 2-1=1s
         return self.sign_ * y_hat
 
@@ -107,18 +107,18 @@ class DecisionStump(BaseEstimator):
         """
 
         n = values.shape[0]
-        xy = np.stack((values, labels), axis=1)
-        xy.view('f8,f8').sort(order=['f0'], axis=0)
-        y_true = xy[:, 1]
-        msc_err = np.inf
+        indices = np.argsort(values)
+        x, y_true = values[indices], labels[indices]
+
+        min_loss = np.inf
         threshold = 0
-        for i in range(n):
+        for i in range(n):  # todo all 1s case
             y_pred = np.concatenate((-sign * np.ones(i), sign * np.ones(n - i)))
-            new_mscerr = misclassification_error(y_true, y_pred)
-            if new_mscerr < msc_err:
-                msc_err = new_mscerr
-                threshold = i
-        return threshold, msc_err
+            new_loss = misclassification_error(np.sign(labels), y_pred)
+            if new_loss < min_loss:
+                min_loss = new_loss
+                threshold = x[i]
+        return threshold, min_loss
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """
@@ -138,4 +138,8 @@ class DecisionStump(BaseEstimator):
             Performance under missclassification loss function
         """
 
-        return misclassification_error(y, self._predict(X))
+        # y_pred = np.sign(self._predict(X))
+        # indices = np.where(np.sign(y) != np.sign(y_pred))
+        # return np.sum(np.abs(y[indices] - y_pred[indices]))
+        # miscls = (np.sign(y) != np.sign(y_pred)).astype(int)
+        return misclassification_error(np.sign(y), np.sign(self._predict(X)))

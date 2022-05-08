@@ -1,6 +1,7 @@
 import numpy as np
 from typing import Tuple
-from IMLearn.learners.metalearners.adaboost import AdaBoost
+# from IMLearn.learners.metalearners.adaboost import AdaBoost
+from IMLearn.metalearners.adaboost import AdaBoost
 from IMLearn.learners.classifiers import DecisionStump
 from utils import *
 import plotly.graph_objects as go
@@ -41,8 +42,25 @@ def generate_data(n: int, noise_ratio: float) -> Tuple[np.ndarray, np.ndarray]:
 def fit_and_evaluate_adaboost(noise, n_learners=250, train_size=5000, test_size=500):
     (train_X, train_y), (test_X, test_y) = generate_data(train_size, noise), generate_data(test_size, noise)
 
+    # ds = DecisionStump().fit(train_X,train_y)
+
     # Question 1: Train- and test errors of AdaBoost in noiseless case
-    raise NotImplementedError()
+    # raise NotImplementedError()
+    adaboost = AdaBoost(DecisionStump, n_learners)
+    adaboost.fit(train_X[:40], train_y[:40])
+    # adaboost.fit(train_X, train_y)
+    train_err, test_err = np.zeros(n_learners), np.zeros(n_learners)
+    for t in range(n_learners):
+        train_err[t] = adaboost.partial_loss(train_X[:40], train_y[:40], t)
+        test_err[t] = adaboost.partial_loss(test_X[:40], test_y[:40], t)
+        # train_err[t] = adaboost.partial_loss(train_X, train_y, t)
+        # test_err[t] = adaboost.partial_loss(test_X, test_y, t)
+
+    x = np.array(range(n_learners))
+    fig = go.Figure(layout=go.Layout(title="AdaBoost - Test Error vs Train Error"))
+    fig.add_trace(go.Scatter(x=x, y=test_err, mode='lines', name='Test Error'))
+    fig.add_trace(go.Scatter(x=x, y=train_err, mode='lines', name='Train Error'))
+    fig.show()
 
     # Question 2: Plotting decision surfaces
     T = [5, 50, 100, 250]
@@ -58,4 +76,5 @@ def fit_and_evaluate_adaboost(noise, n_learners=250, train_size=5000, test_size=
 
 if __name__ == '__main__':
     np.random.seed(0)
+    fit_and_evaluate_adaboost(0)
     raise NotImplementedError()

@@ -1,6 +1,8 @@
 import numpy as np
-from ...base import BaseEstimator
+# from ...base import BaseEstimator
+from ..base import BaseEstimator
 from typing import Callable, NoReturn
+from ..metrics.loss_functions import misclassification_error
 
 
 class AdaBoost(BaseEstimator):
@@ -48,7 +50,23 @@ class AdaBoost(BaseEstimator):
         y : ndarray of shape (n_samples, )
             Responses of input data to fit to
         """
-        raise NotImplementedError()
+
+        n_samples, n_features = X.shape
+        self.D_ = np.ones(n_samples) / n_samples  # set initial distribution to be uniform
+        self.models_, self.weights_ = [], []
+        for t in range(self.iterations_):
+            wl = self.wl_().fit(X, y * self.D_)  # Invoke base learner
+            # wl = self.wl_().fit(X, y)  # Invoke base learner
+            self.models_.append(wl)
+            y_pred = wl.predict(X)
+            # e_t = np.sum(self.D_ @ (y_pred != y).astype(int))
+            e_t = np.sum(self.D_[y_pred != y])
+            w_t = 0.5 * np.log((1 - e_t) / e_t)
+            self.weights_.append(w_t)
+            self.D_ *= np.exp(-y * w_t * y_pred)  # Update sample weights
+            self.D_ /= np.sum(self.D_)  # Normalize weights
+        self.models_ = np.array(self.models_)
+        self.weights_ = np.array(self.weights_)
 
     def _predict(self, X):
         """
@@ -64,7 +82,8 @@ class AdaBoost(BaseEstimator):
         responses : ndarray of shape (n_samples, )
             Predicted responses of given samples
         """
-        raise NotImplementedError()
+
+        return self.partial_predict(X, self.iterations_)
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """
@@ -83,7 +102,8 @@ class AdaBoost(BaseEstimator):
         loss : float
             Performance under missclassification loss function
         """
-        raise NotImplementedError()
+
+        return self.partial_loss(X, y, self.iterations_)
 
     def partial_predict(self, X: np.ndarray, T: int) -> np.ndarray:
         """
@@ -102,7 +122,14 @@ class AdaBoost(BaseEstimator):
         responses : ndarray of shape (n_samples, )
             Predicted responses of given samples
         """
-        raise NotImplementedError()
+
+        # sum_wh = 1 * np.ones(X.shape[0])
+        sum_wh = np.sum(self.weights_[t] * self.models_[t].predict(X) for t in range(T))
+        return np.sign(sum_wh) # * self.D_
+        # sum_wh = 0
+        # for t in range(T):
+        #     sum_wh += self.weights_[t] * self.models_[t].predict(X)
+        # return np.sign(sum_wh)  # * self.D_
 
     def partial_loss(self, X: np.ndarray, y: np.ndarray, T: int) -> float:
         """
@@ -124,4 +151,10 @@ class AdaBoost(BaseEstimator):
         loss : float
             Performance under missclassification loss function
         """
-        raise NotImplementedError()
+
+        y_pred = self.partial_predict(X, T)
+        return misclassification_error(y, y_pred)
+        # loss = 0
+        # for t in range(T):
+        #     loss += self.models_[t]._loss(X, y)
+        # return loss
