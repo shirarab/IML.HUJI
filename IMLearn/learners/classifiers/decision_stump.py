@@ -110,7 +110,10 @@ class DecisionStump(BaseEstimator):
 
         min_loss = np.inf
         threshold = 0
-        for i in range(n):  # todo all 1s case
+
+        new_indices = _get_indices_for_threshold(n, y_true, sign)
+
+        for i in new_indices:  # 32.5344779 time instead of 219.1022538 time # todo all 1s case
             y_pred = np.concatenate((-sign * np.ones(i), sign * np.ones(n - i)))
             new_loss = np.sum(np.where(np.sign(y_true) != y_pred, np.abs(y_true), 0))
             if new_loss < min_loss:
@@ -138,3 +141,15 @@ class DecisionStump(BaseEstimator):
 
         y_pred = np.sign(self._predict(X))
         return np.sum(np.where(np.sign(y) != y_pred, np.abs(y), 0))
+
+
+def _get_indices_for_threshold(n, y_true, sign):
+    new_indices = []
+    good_prev = False
+    for i in range(n):
+        if np.sign(y_true[i]) == sign and not good_prev:
+            new_indices.append(i)
+            good_prev = True
+        if np.sign(y_true[i]) == -sign:
+            good_prev = False
+    return np.array(new_indices)

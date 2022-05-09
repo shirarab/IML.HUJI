@@ -39,30 +39,50 @@ def generate_data(n: int, noise_ratio: float) -> Tuple[np.ndarray, np.ndarray]:
     return X, y
 
 
+# Question 1: Train- and test errors of AdaBoost in noiseless case
+def plot_train_test_errors_adaboost(n_learners, adaboost, train_X, train_y, test_X, test_y):
+    train_err, test_err = np.zeros(n_learners), np.zeros(n_learners)
+    for t in range(n_learners):
+        train_err[t] = adaboost.partial_loss(train_X, train_y, t + 1)
+        test_err[t] = adaboost.partial_loss(test_X, test_y, t + 1)
+
+    x_range = np.array(range(n_learners))
+    fig = go.Figure(layout=go.Layout(title="AdaBoost - Test Error vs Train Error"))
+    fig.add_trace(go.Scatter(x=x_range, y=test_err, mode='lines', name='Test Error'))
+    fig.add_trace(go.Scatter(x=x_range, y=train_err, mode='lines', name='Train Error'))
+    fig.show()
+
+
+# Question 2: Plotting decision surfaces
+def plot_decision_surfaces(T, test_X, test_y, adaboost, lims):
+    subplot_titles = [f"{t} Classifiers" for t in T]
+    fig2 = make_subplots(rows=2, cols=2, subplot_titles=subplot_titles)
+    scatter = go.Scatter(x=test_X[:, 0], y=test_X[:, 1], mode="markers", showlegend=False,
+                         marker=dict(color=test_y, colorscale=[custom[0], custom[-1]]))
+    for i, t in enumerate(T):
+        partial_decision_surface = lambda x: adaboost.partial_predict(x, t)
+        fig2.add_traces([decision_surface(partial_decision_surface, lims[0], lims[1], showscale=False),
+                         scatter], rows=(i // 2) + 1, cols=(i % 2) + 1)
+
+    fig2.update_layout(dict(title=f"Decision Boundries and Test Set"), showlegend=False)
+    fig2.show()
+
+
 def fit_and_evaluate_adaboost(noise, n_learners=250, train_size=5000, test_size=500):
     (train_X, train_y), (test_X, test_y) = generate_data(train_size, noise), generate_data(test_size, noise)
-
-    # ds = DecisionStump().fit(train_X,train_y)
 
     # Question 1: Train- and test errors of AdaBoost in noiseless case
 
     adaboost = AdaBoost(DecisionStump, n_learners)
     adaboost.fit(train_X, train_y)
-    train_err, test_err = np.zeros(n_learners), np.zeros(n_learners)
-    for t in range(n_learners):
-        train_err[t] = adaboost.partial_loss(train_X, train_y, t+1)
-        test_err[t] = adaboost.partial_loss(test_X, test_y, t+1)
-
-    x = np.array(range(n_learners))
-    fig = go.Figure(layout=go.Layout(title="AdaBoost - Test Error vs Train Error"))
-    fig.add_trace(go.Scatter(x=x, y=test_err, mode='lines', name='Test Error'))
-    fig.add_trace(go.Scatter(x=x, y=train_err, mode='lines', name='Train Error'))
-    fig.show()
+    plot_train_test_errors_adaboost(n_learners, adaboost, train_X, train_y, test_X, test_y)
 
     # Question 2: Plotting decision surfaces
     T = [5, 50, 100, 250]
-    lims = np.array([np.r_[train_X, test_X].min(axis=0), np.r_[train_X, test_X].max(axis=0)]).T + np.array([-.1, .1])
-    raise NotImplementedError()
+    lims = np.array([np.r_[train_X, test_X].min(axis=0), np.r_[train_X, test_X].max(axis=0)]).T \
+           + np.array([-.1, .1])
+
+    plot_decision_surfaces(T, test_X, test_y, adaboost, lims)
 
     # Question 3: Decision surface of best performing ensemble
     raise NotImplementedError()
