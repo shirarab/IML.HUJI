@@ -3,7 +3,6 @@ from typing import Tuple, NoReturn
 from ...base import BaseEstimator
 import numpy as np
 from itertools import product
-from ...metrics.loss_functions import misclassification_error
 
 
 class DecisionStump(BaseEstimator):
@@ -49,7 +48,7 @@ class DecisionStump(BaseEstimator):
             thr, new_loss = self._find_threshold(X[:, j_feature], y, sign)
             if new_loss < min_loss:
                 min_loss = new_loss
-                self.threshold_, self.j_, self.sign_ = thr, j_feature, sign  #sign* y[j_feature]
+                self.threshold_, self.j_, self.sign_ = thr, j_feature, sign
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -71,9 +70,8 @@ class DecisionStump(BaseEstimator):
         to or above the threshold are predicted as `sign`
         """
 
-        y_hat = (X[:, self.j_] >= self.threshold_).astype(int)  # 0s, 1s
-        y_hat = y_hat * 2 - 1  # 0-1=-1s, 2-1=1s
-        return self.sign_ * y_hat
+        y_hat = np.where(X[:, self.j_] >= self.threshold_, self.sign_, -self.sign_)
+        return y_hat
 
     def _find_threshold(self, values: np.ndarray, labels: np.ndarray, sign: int) -> Tuple[float, float]:
         """
@@ -114,7 +112,7 @@ class DecisionStump(BaseEstimator):
         threshold = 0
         for i in range(n):  # todo all 1s case
             y_pred = np.concatenate((-sign * np.ones(i), sign * np.ones(n - i)))
-            new_loss = misclassification_error(np.sign(labels), y_pred)
+            new_loss = np.sum(np.where(np.sign(y_true) != y_pred, np.abs(y_true), 0))
             if new_loss < min_loss:
                 min_loss = new_loss
                 threshold = x[i]
@@ -138,8 +136,5 @@ class DecisionStump(BaseEstimator):
             Performance under missclassification loss function
         """
 
-        # y_pred = np.sign(self._predict(X))
-        # indices = np.where(np.sign(y) != np.sign(y_pred))
-        # return np.sum(np.abs(y[indices] - y_pred[indices]))
-        # miscls = (np.sign(y) != np.sign(y_pred)).astype(int)
-        return misclassification_error(np.sign(y), np.sign(self._predict(X)))
+        y_pred = np.sign(self._predict(X))
+        return np.sum(np.where(np.sign(y) != y_pred, np.abs(y), 0))

@@ -45,16 +45,13 @@ def fit_and_evaluate_adaboost(noise, n_learners=250, train_size=5000, test_size=
     # ds = DecisionStump().fit(train_X,train_y)
 
     # Question 1: Train- and test errors of AdaBoost in noiseless case
-    # raise NotImplementedError()
+
     adaboost = AdaBoost(DecisionStump, n_learners)
-    adaboost.fit(train_X[:40], train_y[:40])
-    # adaboost.fit(train_X, train_y)
+    adaboost.fit(train_X, train_y)
     train_err, test_err = np.zeros(n_learners), np.zeros(n_learners)
     for t in range(n_learners):
-        train_err[t] = adaboost.partial_loss(train_X[:40], train_y[:40], t)
-        test_err[t] = adaboost.partial_loss(test_X[:40], test_y[:40], t)
-        # train_err[t] = adaboost.partial_loss(train_X, train_y, t)
-        # test_err[t] = adaboost.partial_loss(test_X, test_y, t)
+        train_err[t] = adaboost.partial_loss(train_X, train_y, t+1)
+        test_err[t] = adaboost.partial_loss(test_X, test_y, t+1)
 
     x = np.array(range(n_learners))
     fig = go.Figure(layout=go.Layout(title="AdaBoost - Test Error vs Train Error"))
