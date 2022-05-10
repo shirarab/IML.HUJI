@@ -1,5 +1,4 @@
 import numpy as np
-# from ...base import BaseEstimator
 from ..base import BaseEstimator
 from typing import Callable, NoReturn
 from ..metrics.loss_functions import misclassification_error
