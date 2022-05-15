@@ -113,7 +113,7 @@ class DecisionStump(BaseEstimator):
 
         new_indices = _get_indices_for_threshold(n, y_true, sign)
 
-        for i in new_indices:  # 32.5344779 time instead of 219.1022538 time # todo all 1s case
+        for i in new_indices:  # 32.5344779 time instead of 219.1022538 time
             y_pred = np.concatenate((-sign * np.ones(i), sign * np.ones(n - i)))
             new_loss = np.sum(np.where(np.sign(y_true) != y_pred, np.abs(y_true), 0))
             if new_loss < min_loss:

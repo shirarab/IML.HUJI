@@ -62,7 +62,7 @@ def plot_decision_surfaces(T, adaboost, lims, scatter, noise):
 
 # Question 3: Decision surface of best performing ensemble
 def plot_decision_surface_best_ensemble(test_err, adaboost, lims, scatter, noise):
-    min_t = np.argmin(test_err)
+    min_t = np.argmin(test_err) + 1
     min_test_err = test_err[min_t]
 
     fig3 = make_subplots(rows=1, cols=1)
