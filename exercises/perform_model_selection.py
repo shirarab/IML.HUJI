@@ -28,9 +28,22 @@ def select_polynomial_degree(n_samples: int = 100, noise: float = 5):
     # Question 1 - Generate dataset for model f(x)=(x+3)(x+2)(x+1)(x-1)(x-2) + eps for eps Gaussian noise
     # and split into training- and testing portions
     raise NotImplementedError()
+    epsilon = np.random.normal(0, noise)
+    response = lambda x: (x + 3)(x + 2)(x + 1)(x - 1)(x - 2) + epsilon
+    x = np.linspace(-1.2, 2, n_samples)
+    y_ = response(x)
+    polynomial_degree = 5
+    model = PolynomialFitting(polynomial_degree)
+    train_x, train_y, test_x, test_y = split_train_test(pd.DataFrame(x), pd.Series(y_), 2 / 3)
+    # todo plot
 
     # Question 2 - Perform CV for polynomial fitting with degrees 0,1,...,10
     raise NotImplementedError()
+    train_x, train_y = np.array(train_x), np.array(train_y)
+    for k in range(11):
+        poly_model = PolynomialFitting(k)
+        avg_train, avg_validation = cross_validate(poly_model, train_x, train_y, mean_square_error, 5)
+        # todo plot
 
     # Question 3 - Using best value of k, fit a k-degree polynomial model and report test error
     raise NotImplementedError()
@@ -62,3 +75,6 @@ def select_regularization_parameter(n_samples: int = 50, n_evaluations: int = 50
 if __name__ == '__main__':
     np.random.seed(0)
     raise NotImplementedError()
+    select_polynomial_degree(100, 5)
+    select_polynomial_degree(100, 0)
+    select_polynomial_degree(1500, 10)

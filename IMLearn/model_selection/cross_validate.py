@@ -3,6 +3,7 @@ from copy import deepcopy
 from typing import Tuple, Callable
 import numpy as np
 from IMLearn import BaseEstimator
+from ..utils import split_train_test
 
 
 def cross_validate(estimator: BaseEstimator, X: np.ndarray, y: np.ndarray,
@@ -37,4 +38,39 @@ def cross_validate(estimator: BaseEstimator, X: np.ndarray, y: np.ndarray,
     validation_score: float
         Average validation score over folds
     """
-    raise NotImplementedError()
+
+    # training set S = {X,y}
+    # learner A = estimator
+    # integer k = cv
+    # scoring function
+
+    split_sets = split_k_sets(X, y, cv)
+    error = []
+    train_score = []
+    validation_score = []
+    for i in range(cv):
+        train_x = np.array(split_sets[:i][0] + split_sets[i + 1:][0])
+        train_y = np.array(split_sets[:i][1] + split_sets[i + 1:][1])
+        validate_x = np.array(split_sets[i][0])
+        validate_y = np.array(split_sets[i][1])
+        estimator.fit(train_x, train_y)
+        error.append(estimator.loss(validate_x, validate_y))
+        train_score.append(1-scoring(train_x, train_y))
+        validation_score.append(1-scoring(validate_x, validate_y))
+    return np.average(np.array(train_score)), np.average(np.array(validation_score))
+
+
+def split_k_sets(X, y, cv):
+    """
+    Randomly partition S to k (cv) disjoint subsets
+    """
+    rest_x, rest_y = deepcopy(X), deepcopy(y)
+    split_sets = []
+    for i in range(cv, 0, -1):
+        percentage = i / rest_x.shape[0]
+        s_x, s_y, rest_x, rest_y = split_train_test(X, y, percentage)
+        split_sets.append((s_x, s_y))
+    return split_sets
+
+    # ...|...|...
+    # ...|......
