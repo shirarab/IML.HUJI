@@ -25,28 +25,45 @@ def select_polynomial_degree(n_samples: int = 100, noise: float = 5):
     noise: float, default = 5
         Noise level to simulate in responses
     """
+
     # Question 1 - Generate dataset for model f(x)=(x+3)(x+2)(x+1)(x-1)(x-2) + eps for eps Gaussian noise
     # and split into training- and testing portions
-    raise NotImplementedError()
-    epsilon = np.random.normal(0, noise)
-    response = lambda x: (x + 3)(x + 2)(x + 1)(x - 1)(x - 2) + epsilon
+    epsilon = np.random.normal(0, noise, n_samples)
+    response = lambda x: (x + 3) * (x + 2) * (x + 1) * (x - 1) * (x - 2)
     x = np.linspace(-1.2, 2, n_samples)
-    y_ = response(x)
-    polynomial_degree = 5
-    model = PolynomialFitting(polynomial_degree)
-    train_x, train_y, test_x, test_y = split_train_test(pd.DataFrame(x), pd.Series(y_), 2 / 3)
-    # todo plot
+    y = response(x) + epsilon
+    degree = 5
+    # model = PolynomialFitting(polynomial_degree)
+    train_x, train_y, test_x, test_y = split_train_test(pd.DataFrame(x), pd.Series(y), 2 / 3)
+    train_x, train_y = train_x[0].to_numpy(), train_y.to_numpy()
+    test_x, test_y = np.array(test_x[0]), np.array(test_y)
+
+    fig = go.Figure(layout=go.Layout(title=f"Model Selection - Test vs Train (noise={noise})"))
+    fig.add_trace(go.Scatter(x=x, y=y - epsilon, mode='lines', name='Noiseless Polynom'))
+    fig.add_trace(go.Scatter(x=train_x, y=train_y, mode='markers', name='Train Set'))
+    fig.add_trace(go.Scatter(x=test_x, y=test_y, mode='markers', name='Test Set'))
+    fig.show()
 
     # Question 2 - Perform CV for polynomial fitting with degrees 0,1,...,10
-    raise NotImplementedError()
-    train_x, train_y = np.array(train_x), np.array(train_y)
+    max_degree = 10
+    k_degrees = np.array(range(max_degree + 1))
+    k_train = np.zeros(max_degree + 1)
+    k_validate = np.zeros(max_degree + 1)
     for k in range(11):
         poly_model = PolynomialFitting(k)
-        avg_train, avg_validation = cross_validate(poly_model, train_x, train_y, mean_square_error, 5)
-        # todo plot
+        avg_train, avg_validation = cross_validate(poly_model, train_x, train_y, mean_square_error, degree)
+        k_train[k] = avg_train
+        k_validate[k] = avg_validation
+    fig2 = go.Figure(layout=go.Layout(title=f"CV for polynomial fitting with degrees 0,1,...,10 (noise={noise})"))
+    fig2.add_trace(go.Scatter(x=k_degrees, y=k_train, mode='lines', name='Train'))
+    fig2.add_trace(go.Scatter(x=k_degrees, y=k_validate, mode='lines', name='Validate'))
+    fig2.show()
 
     # Question 3 - Using best value of k, fit a k-degree polynomial model and report test error
-    raise NotImplementedError()
+    k_star = np.argmin(k_validate)
+    k_model = PolynomialFitting(k_star).fit(train_x, train_y)
+    min_loss = k_model.loss(test_x, test_y)
+    print(f"k star is {k_star} with test error of {min_loss}")
 
 
 def select_regularization_parameter(n_samples: int = 50, n_evaluations: int = 500):
@@ -74,7 +91,6 @@ def select_regularization_parameter(n_samples: int = 50, n_evaluations: int = 50
 
 if __name__ == '__main__':
     np.random.seed(0)
-    raise NotImplementedError()
     select_polynomial_degree(100, 5)
     select_polynomial_degree(100, 0)
     select_polynomial_degree(1500, 10)
