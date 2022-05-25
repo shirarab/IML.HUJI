@@ -29,9 +29,11 @@ def select_polynomial_degree(n_samples: int = 100, noise: float = 5):
     # Question 1 - Generate dataset for model f(x)=(x+3)(x+2)(x+1)(x-1)(x-2) + eps for eps Gaussian noise
     # and split into training- and testing portions
     epsilon = np.random.normal(0, noise, n_samples)
-    response = lambda x: (x + 3) * (x + 2) * (x + 1) * (x - 1) * (x - 2)
-    x = np.linspace(-1.2, 2, n_samples)
-    y = response(x) + epsilon
+    f = lambda x: (x + 3) * (x + 2) * (x + 1) * (x - 1) * (x - 2)
+    x_true = np.linspace(-1.2, 2, n_samples)
+    y_true = f(x_true)
+    x = np.random.uniform(-1.2, 2, n_samples)
+    y = f(x) + epsilon
     degree = 5
     # model = PolynomialFitting(polynomial_degree)
     train_x, train_y, test_x, test_y = split_train_test(pd.DataFrame(x), pd.Series(y), 2 / 3)
@@ -39,7 +41,7 @@ def select_polynomial_degree(n_samples: int = 100, noise: float = 5):
     test_x, test_y = np.array(test_x[0]), np.array(test_y)
 
     fig = go.Figure(layout=go.Layout(title=f"Model Selection - Test vs Train (noise={noise})"))
-    fig.add_trace(go.Scatter(x=x, y=y - epsilon, mode='lines', name='Noiseless Polynom'))
+    fig.add_trace(go.Scatter(x=x_true, y=y_true, mode='lines', name='Noiseless Polynom'))
     fig.add_trace(go.Scatter(x=train_x, y=train_y, mode='markers', name='Train Set'))
     fig.add_trace(go.Scatter(x=test_x, y=test_y, mode='markers', name='Test Set'))
     fig.show()
@@ -60,7 +62,7 @@ def select_polynomial_degree(n_samples: int = 100, noise: float = 5):
     fig2.show()
 
     # Question 3 - Using best value of k, fit a k-degree polynomial model and report test error
-    k_star = np.argmin(k_validate)
+    k_star = int(np.argmin(k_validate))
     k_model = PolynomialFitting(k_star).fit(train_x, train_y)
     min_loss = k_model.loss(test_x, test_y)
     print(f"k star is {k_star} with test error of {min_loss}")
