@@ -46,7 +46,6 @@ def cross_validate(estimator: BaseEstimator, X: np.ndarray, y: np.ndarray,
     split_x = np.array_split(X, cv)
     split_y = np.array_split(y, cv)
 
-    error = []
     train_score = []
     validation_score = []
     for i in range(cv):
@@ -55,7 +54,6 @@ def cross_validate(estimator: BaseEstimator, X: np.ndarray, y: np.ndarray,
         validate_x = np.array(split_x[i])
         validate_y = np.array(split_y[i])
         estimator.fit(train_x, train_y)
-        error.append(estimator.loss(validate_x, validate_y))
         train_score.append(scoring(train_y, estimator.predict(train_x)))
         validation_score.append(scoring(validate_y, estimator.predict(validate_x)))
     return np.average(np.array(train_score)), np.average(np.array(validation_score))
