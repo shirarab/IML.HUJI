@@ -1,6 +1,7 @@
 from __future__ import annotations
 import numpy as np
 import pandas as pd
+import sklearn.linear_model
 from sklearn import datasets
 from IMLearn.metrics import mean_square_error
 from IMLearn.utils import split_train_test
@@ -65,7 +66,7 @@ def select_polynomial_degree(n_samples: int = 100, noise: float = 5):
     k_star = int(np.argmin(k_validate))
     k_model = PolynomialFitting(k_star).fit(train_x, train_y)
     min_loss = k_model.loss(test_x, test_y)
-    print(f"(noise={noise}) k star is {k_star} with test error of {min_loss}")
+    print(f"(noise={noise}) k star is {k_star} with test error of {'%.2f' % min_loss}")
 
 
 def select_regularization_parameter(n_samples: int = 50, n_evaluations: int = 500):
@@ -86,7 +87,7 @@ def select_regularization_parameter(n_samples: int = 50, n_evaluations: int = 50
     train_x, train_y, test_x, test_y = x[:n_samples], y[:n_samples], x[n_samples:], y[n_samples:]
 
     # Question 7 - Perform CV for different values of the regularization parameter for Ridge and Lasso regressions
-    lambdas = np.linspace(0.001, 2, n_evaluations)
+    lambdas = np.linspace(0.01, 3, n_evaluations)
     ridge_train, ridge_validate = [], []
     lasso_train, lasso_validate = [], []
     for lam in lambdas:
@@ -100,11 +101,11 @@ def select_regularization_parameter(n_samples: int = 50, n_evaluations: int = 50
         lasso_validate.append(l_validation)
 
     subplot_titles = ["Ridge", "Lasso"]
-    fig = make_subplots(rows=1, cols=2, subplot_titles=subplot_titles) \
+    fig = make_subplots(rows=1, cols=1, subplot_titles=subplot_titles) \
         .add_trace(go.Scatter(x=lambdas, y=ridge_train, mode="lines", name="ridge train"), row=1, col=1) \
         .add_trace(go.Scatter(x=lambdas, y=ridge_validate, mode="lines", name="ridge validate"), row=1, col=1) \
-        .add_trace(go.Scatter(x=lambdas, y=lasso_train, mode="lines", name="lasso train"), row=1, col=2) \
-        .add_trace(go.Scatter(x=lambdas, y=lasso_validate, mode="lines", name="lasso validate"), row=1, col=2)
+        .add_trace(go.Scatter(x=lambdas, y=lasso_train, mode="lines", name="lasso train"), row=1, col=1) \
+        .add_trace(go.Scatter(x=lambdas, y=lasso_validate, mode="lines", name="lasso validate"), row=1, col=1)
     fig.update_layout(dict(title=f"Cross Validation on Ridge and Lasso",
                            xaxis_title="lambdas", yaxis_title="train&validate"))
     fig.show()
@@ -121,9 +122,9 @@ def select_regularization_parameter(n_samples: int = 50, n_evaluations: int = 50
     lr_model = LinearRegression().fit(train_x, train_y)
     lr_loss = lr_model.loss(test_x, test_y)
 
-    print(f"ridge - best lambda is {ridge_lam} with test error of {ridge_loss}")
-    print(f"lasso - best lambda is {lasso_lam} with test error of {lasso_loss}")
-    print(f"linear regression - with test error of {lr_loss}")
+    print(f"ridge - best lambda is {'%.2f' % ridge_lam} with test error of {'%.2f' % ridge_loss}")
+    print(f"lasso - best lambda is {'%.2f' % lasso_lam} with test error of {'%.2f' % lasso_loss}")
+    print(f"linear regression - with test error of {'%.2f' % lr_loss}")
 
 
 if __name__ == '__main__':
