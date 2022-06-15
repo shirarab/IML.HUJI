@@ -34,7 +34,7 @@ def plot_descent_path(module: Type[BaseModule],
         Plot's x-axis range
 
     yrange: Tuple[float, float], default=(-1.5, 1.5)
-        Plot's x-axis range
+        Plot's y-axis range
 
     Return:
     -------
@@ -64,7 +64,7 @@ def get_gd_state_recorder_callback() -> Tuple[Callable[[], None], List[np.ndarra
     Return:
     -------
     callback: Callable[[], None]
-        Callback function to be passed to the GradientDescent class, recoding the objective's value and parameters
+        Callback function to be passed to the GradientDescent class, recording the objective's value and parameters
         at each iteration of the algorithm
 
     values: List[np.ndarray]
