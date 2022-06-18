@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from typing import Tuple, List, Callable, Type
+from typing import Tuple, List, Callable, Type, NoReturn
 
 from IMLearn import BaseModule
 from IMLearn.desent_methods import GradientDescent, FixedLR, ExponentialLR
@@ -9,6 +9,7 @@ from IMLearn.learners.classifiers.logistic_regression import LogisticRegression
 from IMLearn.utils import split_train_test
 
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 
 def plot_descent_path(module: Type[BaseModule],
@@ -46,12 +47,14 @@ def plot_descent_path(module: Type[BaseModule],
     fig = plot_descent_path(IMLearn.desent_methods.modules.L1, np.ndarray([[1,1],[0,0]]))
     fig.show()
     """
+
     def predict_(w):
         return np.array([module(weights=wi).compute_output() for wi in w])
 
     from utils import decision_surface
     return go.Figure([decision_surface(predict_, xrange=xrange, yrange=yrange, density=70, showscale=False),
-                      go.Scatter(x=descent_path[:, 0], y=descent_path[:, 1], mode="markers+lines", marker_color="black")],
+                      go.Scatter(x=descent_path[:, 0], y=descent_path[:, 1], mode="markers+lines",
+                                 marker_color="black")],
                      layout=go.Layout(xaxis=dict(range=xrange),
                                       yaxis=dict(range=yrange),
                                       title=f"GD Descent Path {title}"))
@@ -73,25 +76,87 @@ def get_gd_state_recorder_callback() -> Tuple[Callable[[], None], List[np.ndarra
     weights: List[np.ndarray]
         Recorded parameters
     """
-    raise NotImplementedError()
+
+    values, weights = [], []
+
+    def cb(**kwargs) -> NoReturn:
+        values.append(kwargs["val"])
+        weights.append(kwargs["weights"])
+
+    return cb, values, weights
+
+
+def helper_plot_descent_path(f: BaseModule, module: Type[BaseModule], name: str, eta: float, learning_rate) \
+        -> List[np.ndarray]:
+    cb, values, weights = get_gd_state_recorder_callback()
+    gd = GradientDescent(learning_rate=learning_rate, callback=cb)
+    gd.fit(f=f, X=None, y=None)
+    fig = plot_descent_path(module=module, descent_path=np.array(weights), title=f"module: {name}, eta: {eta}")
+    fig.show()
+    return values
+
+
+def fixed_convergence(f: BaseModule, fig, min_loss, best_eta, eta, name, values):
+    fig.add_trace(go.Scatter(x=list(range(len(values))), y=values, mode="lines+markers", name=name))
+    if f.compute_output() < min_loss:
+        return f.compute_output(), eta
+    return min_loss, best_eta
 
 
 def compare_fixed_learning_rates(init: np.ndarray = np.array([np.sqrt(2), np.e / 3]),
                                  etas: Tuple[float] = (1, .1, .01, .001)):
-    raise NotImplementedError()
+    l1_min_loss, l1_best_eta = np.inf, None
+    l2_min_loss, l2_best_eta = np.inf, None
+    for eta in etas:
+        fig = make_subplots()
+        fig.update_layout(dict(title=f"Convergence Rate for L1 and L2 (Fixed LR)",
+                               xaxis_title="iteration", yaxis_title="values"))
+        l1, l2 = L1(init.copy()), L2(init.copy())
+        values = helper_plot_descent_path(l1, L1, "L1 (Fixed LR)", eta, FixedLR(eta))
+        l1_min_loss, l1_best_eta = fixed_convergence(l1, fig, l1_min_loss, l1_best_eta, eta, "L1", values)
+        values = helper_plot_descent_path(l2, L2, "L2 (Fixed LR)", eta, FixedLR(eta))
+        l2_min_loss, l2_best_eta = fixed_convergence(l2, fig, l2_min_loss, l2_best_eta, eta, "L2", values)
+
+        fig.show()
+
+    print(f"(Fixed LR) L1: lowest loss={l1_min_loss} with eta={l1_best_eta}")
+    print(f"(Fixed LR) L2: lowest loss={l2_min_loss} with eta={l2_best_eta}")
+
+
+def exponential_optimize_convergence_l1(init: np.ndarray, eta: float, gammas: Tuple[float]):
+    fig = make_subplots()
+    fig.update_layout(dict(title=f"Convergence Rate for L1 (Exponential LR)",
+                           xaxis_title="iteration", yaxis_title="values"))
+
+    min_val, best_gamma = np.inf, None
+    for gamma in gammas:
+        cb, values, weights = get_gd_state_recorder_callback()
+        gd = GradientDescent(learning_rate=ExponentialLR(eta, gamma), callback=cb)
+        f = L1(init.copy())
+        gd.fit(f=f, X=None, y=None)
+        x = list(range(len(values)))
+        fig.add_trace(go.Scatter(x=x, y=values, mode="lines+markers", name=gamma))
+        val = f.compute_output()
+        if val < min_val:
+            min_val, best_gamma = val, gamma
+
+    print(f"(Exponential LR) L1: lowest norm={min_val} with gamma={best_gamma}")
+    return fig
 
 
 def compare_exponential_decay_rates(init: np.ndarray = np.array([np.sqrt(2), np.e / 3]),
                                     eta: float = .1,
                                     gammas: Tuple[float] = (.9, .95, .99, 1)):
     # Optimize the L1 objective using different decay-rate values of the exponentially decaying learning rate
-    raise NotImplementedError()
+    fig = exponential_optimize_convergence_l1(init, eta, gammas)
 
     # Plot algorithm's convergence for the different values of gamma
-    raise NotImplementedError()
+    fig.show()
 
     # Plot descent path for gamma=0.95
-    raise NotImplementedError()
+    gamma = 0.95
+    helper_plot_descent_path(L1(init.copy()), L1, "L1 (Exponential LR)", eta, ExponentialLR(eta, gamma))
+    helper_plot_descent_path(L2(init.copy()), L2, "L2 (Exponential LR)", eta, ExponentialLR(eta, gamma))
 
 
 def load_data(path: str = "../datasets/SAheart.data", train_portion: float = .8) -> \
@@ -143,3 +208,38 @@ if __name__ == '__main__':
     compare_fixed_learning_rates()
     compare_exponential_decay_rates()
     fit_logistic_regression()
+
+"""
+
+def helper_compare_fixed_learning_rates(eta: float, f: BaseModule, module: Type[BaseModule], name: str, fig2):
+    cb, values, weights = get_gd_state_recorder_callback()
+    gd = GradientDescent(learning_rate=FixedLR(eta), callback=cb)
+    gd.fit(f=f, X=None, y=None)
+    fig = plot_descent_path(module=module, descent_path=np.array(weights), title=f"module: {name}, eta: {eta}")
+    fig.show()
+
+    x = list(range(len(values)))
+    fig2.add_trace(go.Scatter(x=x, y=values, mode="lines+markers", name=name))
+    return f.compute_output()
+
+
+def xxxcompare_fixed_learning_rates(init: np.ndarray = np.array([np.sqrt(2), np.e / 3]),
+                                    etas: Tuple[float] = (1, .1, .01, .001)):
+    l1_min_loss, l1_best_eta = np.inf, None
+    l2_min_loss, l2_best_eta = np.inf, None
+    for eta in etas:
+        fig2 = make_subplots()
+        fig2.update_layout(dict(title=f"Convergence Rate for L1 and L2 (Fixed LR)",
+                                xaxis_title="iteration", yaxis_title="values"))
+        l1_loss = helper_compare_fixed_learning_rates(eta, L1(init.copy()), L1, "L1 (Fixed LR)", fig2)
+        if l1_loss < l1_min_loss:
+            l1_min_loss, l1_best_eta = l1_loss, eta
+        l2_loss = helper_compare_fixed_learning_rates(eta, L2(init.copy()), L2, "L2 (Fixed LR)", fig2)
+        if l2_loss < l2_min_loss:
+            l2_min_loss, l2_best_eta = l2_loss, eta
+        fig2.show()
+
+    print(f"(Fixed LR) L1: lowest loss={l1_min_loss} with eta={l1_best_eta}")
+    print(f"(Fixed LR) L2: lowest loss={l2_min_loss} with eta={l2_best_eta}")
+
+"""

@@ -39,6 +39,7 @@ class GradientDescent:
         Callable function receives as input any argument relevant for the current GD iteration. Arguments
         are specified in the `GradientDescent.fit` function
     """
+
     def __init__(self,
                  learning_rate: BaseLR = FixedLR(1e-3),
                  tol: float = 1e-5,
@@ -121,22 +122,23 @@ class GradientDescent:
         """
 
         best_w = f.weights
-        best_obj = f.compute_output(X, y)
+        best_obj = f.compute_output(X=X, y=y)
         prev_w = f.weights
         sum_w = f.weights
-
+        # self.callback_(solver=self, weights=f.weights, val=best_obj, grad=f.compute_jacobian(X=X, y=y))
         t = 1
         while t < self.max_iter_:
-            eta = self.learning_rate_.lr_step(t)
-            f.weights = f.weights - eta * f.compute_jacobian(X, y)
+            eta = self.learning_rate_.lr_step(t=t)
+            f.weights = f.weights - eta * f.compute_jacobian(X=X, y=y)
             delta = np.linalg.norm(f.weights - prev_w)
-            val = f.compute_output(X, y)
+            val = f.compute_output(X=X, y=y)
             if val < best_obj:
                 best_obj = val
                 best_w = f.weights
             sum_w += f.weights
-            self.callback_(self, f.weights, val, f.compute_jacobian(X, y), t, eta, delta)
-            if delta > self.tol_:
+            self.callback_(solver=self, weights=f.weights, val=val, grad=f.compute_jacobian(X=X, y=y),
+                           t=t, eta=eta, delta=delta)
+            if delta < self.tol_:
                 break
             t += 1
 
