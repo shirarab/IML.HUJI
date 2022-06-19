@@ -7,6 +7,8 @@ from IMLearn.desent_methods import GradientDescent, FixedLR, ExponentialLR
 from IMLearn.desent_methods.modules import L1, L2
 from IMLearn.learners.classifiers.logistic_regression import LogisticRegression
 from IMLearn.utils import split_train_test
+from IMLearn.model_selection import cross_validate
+from IMLearn.metrics import misclassification_error
 
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -191,16 +193,69 @@ def load_data(path: str = "../datasets/SAheart.data", train_portion: float = .8)
     return split_train_test(df.drop(['chd', 'row.names'], axis=1), df.chd, train_portion)
 
 
+def get_rates(y_hat, y_train):
+    def rate(a, b):
+        return np.sum((y_hat == a) & (y_train == b))
+
+    return rate(1, 1), rate(1, 0), rate(0, 1), rate(0, 0)
+
+
+def logistic_convergence_SA(lr, X_train, y_train):
+    lr.fit(X_train, y_train)
+    proba = lr.predict_proba(X_train)
+    alphas = 100
+    tpr, fpr = [], []
+    for a in range(alphas + 1):
+        y_hat = np.where(proba >= (a / alphas), 1, 0)
+        tp, fp, fn, tn = get_rates(y_hat, y_train)
+        tpr.append(tp / (tp + fn))
+        fpr.append(fp / (fp + tn))
+    return tpr, fpr
+
+
+def logistic_regularize_cv(lambdas, penalty, X_train, y_train, X_test, y_test, alpha=.5):
+    # train_scores = []
+    validation_scores = []
+    for l in lambdas:
+        lr = LogisticRegression(penalty=penalty, lam=l)
+        ts, vs = cross_validate(lr, X_train, y_train, misclassification_error)
+        # train_scores.append(ts)
+        validation_scores.append(vs)
+
+    l_star = lambdas[int(np.argmin(validation_scores))]
+    lr_star = LogisticRegression(penalty=penalty, lam=l_star)
+    lr_star.fit(X_train, y_train)
+    test_error = lr_star.loss(X_test, y_test)
+    print(f"({penalty}) Best lambda is {l_star} with test error of {test_error}")
+
+
 def fit_logistic_regression():
     # Load and split SA Heard Disease dataset
     X_train, y_train, X_test, y_test = load_data()
 
+    X_train, y_train = X_train.to_numpy(), y_train.to_numpy()
+    X_test, y_test = X_test.to_numpy(), y_test.to_numpy()
+
     # Plotting convergence rate of logistic regression over SA heart disease data
-    raise NotImplementedError()
+    lr = LogisticRegression()
+    tpr, fpr = logistic_convergence_SA(lr, X_train, y_train)
+    fig = make_subplots()
+    fig.update_layout(dict(title=f"Convergence Rate for LR",
+                           xaxis_title="fpr", yaxis_title="tpr"))
+    fig.add_trace(go.Scatter(x=fpr, y=tpr, mode="lines+markers"))
+    fig.show()
+
+    a_star = np.argmax(np.array(tpr) - np.array(fpr)) / 100
+    lr_star = LogisticRegression(alpha=a_star)
+    lr_star.fit(X_train, y_train)
+    test_error = lr_star.loss(X_test, y_test)
+    print(f"Alpha with optimal ROC curve is {a_star} with test error of {test_error}")
 
     # Fitting l1- and l2-regularized logistic regression models, using cross-validation to specify values
     # of regularization parameter
-    raise NotImplementedError()
+    lambdas = np.linspace(0.001, 0.1, 10)
+    logistic_regularize_cv(lambdas, "l1", X_train, y_train, X_test, y_test)
+    logistic_regularize_cv(lambdas, "l2", X_train, y_train, X_test, y_test)
 
 
 if __name__ == '__main__':
@@ -208,38 +263,3 @@ if __name__ == '__main__':
     compare_fixed_learning_rates()
     compare_exponential_decay_rates()
     fit_logistic_regression()
-
-"""
-
-def helper_compare_fixed_learning_rates(eta: float, f: BaseModule, module: Type[BaseModule], name: str, fig2):
-    cb, values, weights = get_gd_state_recorder_callback()
-    gd = GradientDescent(learning_rate=FixedLR(eta), callback=cb)
-    gd.fit(f=f, X=None, y=None)
-    fig = plot_descent_path(module=module, descent_path=np.array(weights), title=f"module: {name}, eta: {eta}")
-    fig.show()
-
-    x = list(range(len(values)))
-    fig2.add_trace(go.Scatter(x=x, y=values, mode="lines+markers", name=name))
-    return f.compute_output()
-
-
-def xxxcompare_fixed_learning_rates(init: np.ndarray = np.array([np.sqrt(2), np.e / 3]),
-                                    etas: Tuple[float] = (1, .1, .01, .001)):
-    l1_min_loss, l1_best_eta = np.inf, None
-    l2_min_loss, l2_best_eta = np.inf, None
-    for eta in etas:
-        fig2 = make_subplots()
-        fig2.update_layout(dict(title=f"Convergence Rate for L1 and L2 (Fixed LR)",
-                                xaxis_title="iteration", yaxis_title="values"))
-        l1_loss = helper_compare_fixed_learning_rates(eta, L1(init.copy()), L1, "L1 (Fixed LR)", fig2)
-        if l1_loss < l1_min_loss:
-            l1_min_loss, l1_best_eta = l1_loss, eta
-        l2_loss = helper_compare_fixed_learning_rates(eta, L2(init.copy()), L2, "L2 (Fixed LR)", fig2)
-        if l2_loss < l2_min_loss:
-            l2_min_loss, l2_best_eta = l2_loss, eta
-        fig2.show()
-
-    print(f"(Fixed LR) L1: lowest loss={l1_min_loss} with eta={l1_best_eta}")
-    print(f"(Fixed LR) L2: lowest loss={l2_min_loss} with eta={l2_best_eta}")
-
-"""

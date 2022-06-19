@@ -88,7 +88,23 @@ class LogisticRegression(BaseEstimator):
         Fits model using specified `self.optimizer_` passed when instantiating class and includes an intercept
         if specified by `self.include_intercept_
         """
-        raise NotImplementedError()
+
+        new_x = X.copy()
+        if self.include_intercept_:
+            new_x = np.insert(new_x, 0, 1, axis=1)
+        m, d = new_x.shape
+        self.coefs_ = reg_coefs = np.random.randn(d) / d ** .5
+        if self.include_intercept_:
+            reg_coefs = reg_coefs[1:]
+        reg_model = None
+        if self.penalty_ == "l1":
+            reg_model = L1(reg_coefs)
+        if self.penalty_ == "l2":
+            reg_model = L2(reg_coefs)
+        rm = RegularizedModule(fidelity_module=LogisticModule(self.coefs_),
+                               regularization_module=reg_model, lam=self.lam_,
+                               weights=self.coefs_, include_intercept=self.include_intercept_)
+        self.coefs_ = self.solver_.fit(rm, new_x, y)
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -104,7 +120,8 @@ class LogisticRegression(BaseEstimator):
         responses : ndarray of shape (n_samples, )
             Predicted responses of given samples
         """
-        raise NotImplementedError()
+
+        return np.where(self.predict_proba(X) >= self.alpha_, 1, 0)
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
         """
@@ -120,7 +137,12 @@ class LogisticRegression(BaseEstimator):
         probabilities: ndarray of shape (n_samples,)
             Probability of each sample being classified as `1` according to the fitted model
         """
-        raise NotImplementedError()
+
+        new_x = X.copy()
+        if self.include_intercept_:
+            new_x = np.insert(new_x, 0, 1, axis=1)
+        expxw = np.exp(new_x @ self.coefs_)
+        return expxw / (expxw + 1)
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """
@@ -139,4 +161,6 @@ class LogisticRegression(BaseEstimator):
         loss : float
             Performance under misclassification error
         """
-        raise NotImplementedError()
+
+        from ...metrics import misclassification_error
+        return misclassification_error(y, self._predict(X))
