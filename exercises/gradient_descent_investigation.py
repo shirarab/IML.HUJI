@@ -99,7 +99,7 @@ def helper_plot_descent_path(f: BaseModule, module: Type[BaseModule], name: str,
 
 
 def fixed_convergence(f: BaseModule, fig, min_loss, best_eta, eta, name, values):
-    fig.add_trace(go.Scatter(x=list(range(len(values))), y=values, mode="lines+markers", name=name))
+    fig.add_trace(go.Scatter(x=list(range(len(values))), y=values, mode="lines+markers", name=eta))
     if f.compute_output() < min_loss:
         return f.compute_output(), eta
     return min_loss, best_eta
@@ -109,17 +109,21 @@ def compare_fixed_learning_rates(init: np.ndarray = np.array([np.sqrt(2), np.e /
                                  etas: Tuple[float] = (1, .1, .01, .001)):
     l1_min_loss, l1_best_eta = np.inf, None
     l2_min_loss, l2_best_eta = np.inf, None
+    fig_l1 = make_subplots()
+    fig_l1.update_layout(dict(title=f"Convergence Rate for L1 (Fixed LR)",
+                              xaxis_title="iteration", yaxis_title="values"))
+    fig_l2 = make_subplots()
+    fig_l2.update_layout(dict(title=f"Convergence Rate for L2 (Fixed LR)",
+                              xaxis_title="iteration", yaxis_title="values"))
     for eta in etas:
-        fig = make_subplots()
-        fig.update_layout(dict(title=f"Convergence Rate for L1 and L2 (Fixed LR)",
-                               xaxis_title="iteration", yaxis_title="values"))
         l1, l2 = L1(init.copy()), L2(init.copy())
         values = helper_plot_descent_path(l1, L1, "L1 (Fixed LR)", eta, FixedLR(eta))
-        l1_min_loss, l1_best_eta = fixed_convergence(l1, fig, l1_min_loss, l1_best_eta, eta, "L1", values)
+        l1_min_loss, l1_best_eta = fixed_convergence(l1, fig_l1, l1_min_loss, l1_best_eta, eta, "L1", values)
         values = helper_plot_descent_path(l2, L2, "L2 (Fixed LR)", eta, FixedLR(eta))
-        l2_min_loss, l2_best_eta = fixed_convergence(l2, fig, l2_min_loss, l2_best_eta, eta, "L2", values)
+        l2_min_loss, l2_best_eta = fixed_convergence(l2, fig_l2, l2_min_loss, l2_best_eta, eta, "L2", values)
 
-        fig.show()
+    fig_l1.show()
+    fig_l2.show()
 
     print(f"(Fixed LR) L1: lowest loss={l1_min_loss} with eta={l1_best_eta}")
     print(f"(Fixed LR) L2: lowest loss={l2_min_loss} with eta={l2_best_eta}")
@@ -157,8 +161,10 @@ def compare_exponential_decay_rates(init: np.ndarray = np.array([np.sqrt(2), np.
 
     # Plot descent path for gamma=0.95
     gamma = 0.95
-    helper_plot_descent_path(L1(init.copy()), L1, "L1 (Exponential LR)", eta, ExponentialLR(eta, gamma))
-    helper_plot_descent_path(L2(init.copy()), L2, "L2 (Exponential LR)", eta, ExponentialLR(eta, gamma))
+    helper_plot_descent_path(L1(init.copy()), L1, f"L1 (Exponential LR), gamma: {gamma}",
+                             eta, ExponentialLR(eta, gamma))
+    helper_plot_descent_path(L2(init.copy()), L2, f"L2 (Exponential LR), gamma: {gamma}",
+                             eta, ExponentialLR(eta, gamma))
 
 
 def load_data(path: str = "../datasets/SAheart.data", train_portion: float = .8) -> \
@@ -217,13 +223,15 @@ def logistic_regularize_cv(lambdas, penalty, X_train, y_train, X_test, y_test, a
     # train_scores = []
     validation_scores = []
     for l in lambdas:
-        lr = LogisticRegression(penalty=penalty, lam=l)
+        solver = GradientDescent(learning_rate=FixedLR(1e-4), max_iter=20000)
+        lr = LogisticRegression(penalty=penalty, lam=l, solver=solver)
         ts, vs = cross_validate(lr, X_train, y_train, misclassification_error)
         # train_scores.append(ts)
         validation_scores.append(vs)
 
     l_star = lambdas[int(np.argmin(validation_scores))]
-    lr_star = LogisticRegression(penalty=penalty, lam=l_star)
+    solver = GradientDescent(learning_rate=FixedLR(1e-4), max_iter=20000)
+    lr_star = LogisticRegression(penalty=penalty, lam=l_star, solver=solver)
     lr_star.fit(X_train, y_train)
     test_error = lr_star.loss(X_test, y_test)
     print(f"({penalty}) Best lambda is {l_star} with test error of {test_error}")
@@ -253,7 +261,7 @@ def fit_logistic_regression():
 
     # Fitting l1- and l2-regularized logistic regression models, using cross-validation to specify values
     # of regularization parameter
-    lambdas = np.linspace(0.001, 0.1, 10)
+    lambdas = [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1]
     logistic_regularize_cv(lambdas, "l1", X_train, y_train, X_test, y_test)
     logistic_regularize_cv(lambdas, "l2", X_train, y_train, X_test, y_test)
 
