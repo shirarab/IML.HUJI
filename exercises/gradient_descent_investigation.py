@@ -98,7 +98,7 @@ def helper_plot_descent_path(f: BaseModule, module: Type[BaseModule], name: str,
     return values
 
 
-def fixed_convergence(f: BaseModule, fig, min_loss, best_eta, eta, name, values):
+def fixed_convergence(f: BaseModule, fig, min_loss, best_eta, eta, values):
     fig.add_trace(go.Scatter(x=list(range(len(values))), y=values, mode="lines+markers", name=eta))
     if f.compute_output() < min_loss:
         return f.compute_output(), eta
@@ -118,9 +118,9 @@ def compare_fixed_learning_rates(init: np.ndarray = np.array([np.sqrt(2), np.e /
     for eta in etas:
         l1, l2 = L1(init.copy()), L2(init.copy())
         values = helper_plot_descent_path(l1, L1, "L1 (Fixed LR)", eta, FixedLR(eta))
-        l1_min_loss, l1_best_eta = fixed_convergence(l1, fig_l1, l1_min_loss, l1_best_eta, eta, "L1", values)
+        l1_min_loss, l1_best_eta = fixed_convergence(l1, fig_l1, l1_min_loss, l1_best_eta, eta, values)
         values = helper_plot_descent_path(l2, L2, "L2 (Fixed LR)", eta, FixedLR(eta))
-        l2_min_loss, l2_best_eta = fixed_convergence(l2, fig_l2, l2_min_loss, l2_best_eta, eta, "L2", values)
+        l2_min_loss, l2_best_eta = fixed_convergence(l2, fig_l2, l2_min_loss, l2_best_eta, eta, values)
 
     fig_l1.show()
     fig_l2.show()
@@ -141,7 +141,7 @@ def exponential_optimize_convergence_l1(init: np.ndarray, eta: float, gammas: Tu
         f = L1(init.copy())
         gd.fit(f=f, X=None, y=None)
         x = list(range(len(values)))
-        fig.add_trace(go.Scatter(x=x, y=values, mode="lines+markers", name=gamma))
+        fig.add_trace(go.Scatter(x=x, y=values, mode="lines", name=gamma))
         val = f.compute_output()
         if val < min_val:
             min_val, best_gamma = val, gamma
