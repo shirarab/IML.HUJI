@@ -125,12 +125,14 @@ class GradientDescent:
         best_obj = f.compute_output(X=X, y=y)
         prev_w = f.weights
         sum_w = f.weights
-        # self.callback_(solver=self, weights=f.weights, val=best_obj, grad=f.compute_jacobian(X=X, y=y))
-        t = 1
+
+        t = 0
         while t < self.max_iter_:
             eta = self.learning_rate_.lr_step(t=t)
-            f.weights = f.weights - eta * f.compute_jacobian(X=X, y=y)
-            delta = np.linalg.norm(f.weights - prev_w)
+            new_w = f.weights - eta * f.compute_jacobian(X=X, y=y)
+            delta = np.linalg.norm(new_w - prev_w)
+            prev_w = f.weights
+            f.weights = new_w
             val = f.compute_output(X=X, y=y)
             if val < best_obj:
                 best_obj = val

@@ -228,9 +228,9 @@ class RegularizedModule(BaseModule):
         """
 
         fidelity = self.fidelity_module_.compute_output(X=kwargs["X"], y=kwargs["y"])
-        regularization = 0
-        if self.regularization_module_ is not None:
-            regularization = self.regularization_module_.compute_output(X=kwargs["X"], y=kwargs["y"])
+        if self.regularization_module_ is None:
+            return fidelity
+        regularization = self.regularization_module_.compute_output(X=kwargs["X"], y=kwargs["y"])
         return fidelity + self.lam_ * regularization
 
     def compute_jacobian(self, **kwargs) -> np.ndarray:
@@ -249,11 +249,11 @@ class RegularizedModule(BaseModule):
         """
 
         fidelity = self.fidelity_module_.compute_jacobian(X=kwargs["X"], y=kwargs["y"])
-        regularization = 0
-        if self.regularization_module_ is not None:
-            regularization = self.regularization_module_.compute_output(X=kwargs["X"], y=kwargs["y"])
-            if self.include_intercept_:
-                regularization = np.insert(regularization, 0, 1)  # todo ?
+        if self.regularization_module_ is None:
+            return fidelity
+        regularization = self.regularization_module_.compute_output(X=kwargs["X"], y=kwargs["y"])
+        if self.include_intercept_:
+            regularization = np.insert(regularization, 0, 1)
         return fidelity + self.lam_ * regularization
 
     @property
@@ -284,7 +284,8 @@ class RegularizedModule(BaseModule):
 
         self.fidelity_module_.weights = weights.copy()
         self.weights_ = weights.copy()
-        if self.regularization_module_ is not None:
-            self.regularization_module_.weights = weights.copy()
-            if self.include_intercept_:
-                self.regularization_module_.weights = self.regularization_module_.weights[1:]
+        if self.regularization_module_ is None:
+            return
+        self.regularization_module_.weights = weights.copy()
+        if self.include_intercept_:
+            self.regularization_module_.weights = self.regularization_module_.weights[1:]
