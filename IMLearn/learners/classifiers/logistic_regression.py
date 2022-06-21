@@ -93,17 +93,15 @@ class LogisticRegression(BaseEstimator):
         if self.include_intercept_:
             new_x = np.insert(new_x, 0, 1, axis=1)
         m, d = new_x.shape
-        self.coefs_ = reg_coefs = np.random.randn(d) / d ** .5
-        if self.include_intercept_:
-            reg_coefs = reg_coefs[1:]
-        reg_model = None
-        if self.penalty_ == "l1":
-            reg_model = L1(reg_coefs)
-        if self.penalty_ == "l2":
-            reg_model = L2(reg_coefs)
-        rm = RegularizedModule(fidelity_module=LogisticModule(self.coefs_),
+        reg_coefs = np.random.randn(d) / (d ** .5)
+        lm = LogisticModule(reg_coefs)
+        if self.penalty_ == "none":
+            self.coefs_ = self.solver_.fit(lm, new_x, y)
+            return
+        reg_model = L1(reg_coefs) if self.penalty_ == "l1" else L2(reg_coefs)
+        rm = RegularizedModule(fidelity_module=lm,
                                regularization_module=reg_model, lam=self.lam_,
-                               weights=self.coefs_, include_intercept=self.include_intercept_)
+                               weights=reg_coefs, include_intercept=self.include_intercept_)
         self.coefs_ = self.solver_.fit(rm, new_x, y)
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
@@ -121,7 +119,7 @@ class LogisticRegression(BaseEstimator):
             Predicted responses of given samples
         """
 
-        return np.where(self.predict_proba(X) >= self.alpha_, 1, 0)
+        return np.where(self.predict_proba(X) > self.alpha_, 1, 0)
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
         """

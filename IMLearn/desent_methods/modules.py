@@ -139,10 +139,14 @@ class LogisticModule(BaseModule):
         """
 
         # f(w) = -log(mult(P[Y=yi|X=xi,w])) = -sum(log(P[Y=yi|X=xi,w]))
+        # m = X.shape[0]
+        # Xw = X @ self.weights
+        # loge = np.log(1 + np.exp(Xw))
+        # return (loge.sum() - (y * Xw).sum()) / m
+
         m = X.shape[0]
         Xw = X @ self.weights
-        loge = np.log(1 + np.exp(Xw))
-        return (loge.sum() - (y * Xw).sum()) / m
+        return np.sum(np.log(1 + np.exp(Xw)) - (y * Xw)) / m
 
     def compute_jacobian(self, X: np.ndarray, y: np.ndarray, **kwargs) -> np.ndarray:
         """
@@ -162,12 +166,16 @@ class LogisticModule(BaseModule):
             Derivative of function with respect to self.weights at point self.weights
         """
 
+        # m, d = X.shape
+        # exw = np.exp(X @ self.weights)
+        # xie = []
+        # for i in range(m):
+        #     xie.append((X[i] * exw[i]) / (1 + exw[i]))
+        # return (np.array(xie).sum() - (y @ X).sum()) / m
+
         m, d = X.shape
         exw = np.exp(X @ self.weights)
-        xie = []
-        for i in range(m):
-            xie.append((X[i] * exw[i]) / (1 + exw[i]))
-        return (np.array(xie).sum() - (y @ X).sum()) / m
+        return (X.T @ (exw / (1 + exw)) - (y @ X)) / m
 
 
 class RegularizedModule(BaseModule):
@@ -227,8 +235,6 @@ class RegularizedModule(BaseModule):
         """
 
         fidelity = self.fidelity_module_.compute_output(**kwargs)
-        if self.regularization_module_ is None:
-            return fidelity
         regularization = self.regularization_module_.compute_output(**kwargs)
         return fidelity + self.lam_ * regularization
 
@@ -248,8 +254,6 @@ class RegularizedModule(BaseModule):
         """
 
         fidelity = self.fidelity_module_.compute_jacobian(**kwargs)
-        if self.regularization_module_ is None:
-            return fidelity
         regularization = self.regularization_module_.compute_output(**kwargs)
         if self.include_intercept_:
             regularization = np.insert(regularization, 0, 0)
@@ -283,8 +287,6 @@ class RegularizedModule(BaseModule):
 
         self.fidelity_module_.weights = weights.copy()
         self.weights_ = weights.copy()
-        if self.regularization_module_ is None:
-            return
         self.regularization_module_.weights = weights.copy()
         if self.include_intercept_:
             self.regularization_module_.weights = self.regularization_module_.weights[1:]
