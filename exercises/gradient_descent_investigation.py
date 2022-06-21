@@ -9,6 +9,7 @@ from IMLearn.learners.classifiers.logistic_regression import LogisticRegression
 from IMLearn.utils import split_train_test
 from IMLearn.model_selection import cross_validate
 from IMLearn.metrics import misclassification_error
+from sklearn.metrics import roc_curve, auc
 
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -125,8 +126,8 @@ def compare_fixed_learning_rates(init: np.ndarray = np.array([np.sqrt(2), np.e /
     fig_l1.show()
     fig_l2.show()
 
-    print(f"(Fixed LR) L1: lowest loss={l1_min_loss} with eta={l1_best_eta}")
-    print(f"(Fixed LR) L2: lowest loss={l2_min_loss} with eta={l2_best_eta}")
+    print(f"(Fixed LR) L1: lowest loss={l1_min_loss:.3f} with eta={l1_best_eta:.3f}")
+    print(f"(Fixed LR) L2: lowest loss={l2_min_loss:.3f} with eta={l2_best_eta:.3f}")
 
 
 def exponential_optimize_convergence_l1(init: np.ndarray, eta: float, gammas: Tuple[float]):
@@ -146,7 +147,7 @@ def exponential_optimize_convergence_l1(init: np.ndarray, eta: float, gammas: Tu
         if val < min_val:
             min_val, best_gamma = val, gamma
 
-    print(f"(Exponential LR) L1: lowest norm={min_val} with gamma={best_gamma}")
+    print(f"(Exponential LR) L1: lowest norm={min_val:.3f} with gamma={best_gamma:.3f}")
     return fig
 
 
@@ -199,34 +200,26 @@ def load_data(path: str = "../datasets/SAheart.data", train_portion: float = .8)
     return split_train_test(df.drop(['chd', 'row.names'], axis=1), df.chd, train_portion)
 
 
-def get_rates(y_hat, y_train):
-    def rate(a, b):
-        return np.sum((y_hat == a) & (y_train == b))
-
-    return rate(1, 1), rate(1, 0), rate(0, 1), rate(0, 0)
-
-
-def logistic_convergence_SA(lr, X_train, y_train):
+def plot_logistic_convergence_SA_thlds(lr, X_train, y_train):
     lr.fit(X_train, y_train)
     proba = lr.predict_proba(X_train)
-    alphas = 100
-    tpr, fpr = [], []
-    for a in range(alphas + 1):
-        y_hat = np.where(proba >= (a / alphas), 1, 0)
-        tp, fp, fn, tn = get_rates(y_hat, y_train)
-        tpr.append(tp / (tp + fn))
-        fpr.append(fp / (fp + tn))
-    return tpr, fpr
+    fpr, tpr, thlds = roc_curve(y_train, proba)
+
+    fig = make_subplots()
+    fig.update_layout(dict(title=f"ROC Curve for LR, auc: {auc(fpr, tpr):.3f}",
+                           xaxis_title="fpr", yaxis_title="tpr"))
+    fig.add_trace(go.Scatter(x=fpr, y=tpr, mode="lines+markers"))
+    fig.add_trace(go.Scatter(x=[0,1], y=[0,1], mode="lines"))
+    fig.show()
+    return fpr, tpr, thlds
 
 
 def logistic_regularize_cv(lambdas, penalty, X_train, y_train, X_test, y_test, alpha=.5):
-    # train_scores = []
     validation_scores = []
     for l in lambdas:
         solver = GradientDescent(learning_rate=FixedLR(1e-4), max_iter=20000)
         lr = LogisticRegression(penalty=penalty, lam=l, solver=solver)
         ts, vs = cross_validate(lr, X_train, y_train, misclassification_error)
-        # train_scores.append(ts)
         validation_scores.append(vs)
 
     l_star = lambdas[int(np.argmin(validation_scores))]
@@ -234,7 +227,7 @@ def logistic_regularize_cv(lambdas, penalty, X_train, y_train, X_test, y_test, a
     lr_star = LogisticRegression(penalty=penalty, lam=l_star, solver=solver)
     lr_star.fit(X_train, y_train)
     test_error = lr_star.loss(X_test, y_test)
-    print(f"({penalty}) Best lambda is {l_star} with test error of {test_error}")
+    print(f"({penalty}) Best lambda is {l_star} with test error of {test_error:.3f}")
 
 
 def fit_logistic_regression():
@@ -246,18 +239,13 @@ def fit_logistic_regression():
 
     # Plotting convergence rate of logistic regression over SA heart disease data
     lr = LogisticRegression()
-    tpr, fpr = logistic_convergence_SA(lr, X_train, y_train)
-    fig = make_subplots()
-    fig.update_layout(dict(title=f"Convergence Rate for LR",
-                           xaxis_title="fpr", yaxis_title="tpr"))
-    fig.add_trace(go.Scatter(x=fpr, y=tpr, mode="lines+markers"))
-    fig.show()
+    fpr, tpr, thlds = plot_logistic_convergence_SA_thlds(lr, X_train, y_train)
 
-    a_star = np.argmax(np.array(tpr) - np.array(fpr)) / 100
+    a_star = thlds[np.argmax(tpr - fpr)]
     lr_star = LogisticRegression(alpha=a_star)
     lr_star.fit(X_train, y_train)
     test_error = lr_star.loss(X_test, y_test)
-    print(f"Alpha with optimal ROC curve is {a_star} with test error of {test_error}")
+    print(f"(ROC curve) Best alpha is {a_star:.3f} with test error of {test_error:.3f}")
 
     # Fitting l1- and l2-regularized logistic regression models, using cross-validation to specify values
     # of regularization parameter

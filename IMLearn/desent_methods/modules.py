@@ -142,8 +142,7 @@ class LogisticModule(BaseModule):
         m = X.shape[0]
         Xw = X @ self.weights
         loge = np.log(1 + np.exp(Xw))
-        yXw = y * Xw
-        return (loge.sum() - yXw.sum()) / m
+        return (loge.sum() - (y * Xw).sum()) / m
 
     def compute_jacobian(self, X: np.ndarray, y: np.ndarray, **kwargs) -> np.ndarray:
         """
@@ -227,10 +226,10 @@ class RegularizedModule(BaseModule):
             Value of function at point self.weights
         """
 
-        fidelity = self.fidelity_module_.compute_output(X=kwargs["X"], y=kwargs["y"])
+        fidelity = self.fidelity_module_.compute_output(**kwargs)
         if self.regularization_module_ is None:
             return fidelity
-        regularization = self.regularization_module_.compute_output(X=kwargs["X"], y=kwargs["y"])
+        regularization = self.regularization_module_.compute_output(**kwargs)
         return fidelity + self.lam_ * regularization
 
     def compute_jacobian(self, **kwargs) -> np.ndarray:
@@ -248,12 +247,12 @@ class RegularizedModule(BaseModule):
             Derivative with respect to self.weights at point self.weights
         """
 
-        fidelity = self.fidelity_module_.compute_jacobian(X=kwargs["X"], y=kwargs["y"])
+        fidelity = self.fidelity_module_.compute_jacobian(**kwargs)
         if self.regularization_module_ is None:
             return fidelity
-        regularization = self.regularization_module_.compute_output(X=kwargs["X"], y=kwargs["y"])
+        regularization = self.regularization_module_.compute_output(**kwargs)
         if self.include_intercept_:
-            regularization = np.insert(regularization, 0, 1)
+            regularization = np.insert(regularization, 0, 0)
         return fidelity + self.lam_ * regularization
 
     @property
