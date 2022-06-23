@@ -150,35 +150,3 @@ class GradientDescent:
             return best_w
         # if self.out_type_ == "average":
         return sum_w / t + 1
-
-# f.weights = f.weights if f.weights is not None else np.random.rand(X.shape[1])
-#
-# best_w = f.weights
-# best_obj = f.compute_output(X=X, y=y)
-# prev_w = f.weights
-# sum_w = f.weights
-#
-# t = 0
-# while t < self.max_iter_:
-#     eta = self.learning_rate_.lr_step(t=t)
-#     new_w = f.weights - eta * f.compute_jacobian(X=X, y=y)
-#     delta = np.linalg.norm(new_w - prev_w)
-#     prev_w = f.weights
-#     f.weights = new_w
-#     val = f.compute_output(X=X, y=y)
-#     if val < best_obj:
-#         best_obj = val
-#         best_w = f.weights
-#     sum_w += f.weights
-#     self.callback_(solver=self, weights=f.weights, val=val, grad=f.compute_jacobian(X=X, y=y),
-#                    t=t, eta=eta, delta=delta)
-#     if delta < self.tol_:
-#         break
-#     t += 1
-#
-# if self.out_type_ == "last":
-#     return f.weights
-# if self.out_type_ == "best":
-#     return best_w
-# # if self.out_type_ == "average":
-# return sum_w / t + 1

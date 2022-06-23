@@ -100,7 +100,7 @@ def helper_plot_descent_path(f: BaseModule, module: Type[BaseModule], name: str,
 
 
 def fixed_convergence(f: BaseModule, fig, min_loss, best_eta, eta, values):
-    fig.add_trace(go.Scatter(x=list(range(len(values))), y=values, mode="lines+markers", name=eta))
+    fig.add_trace(go.Scatter(x=list(range(len(values))), y=values, mode="markers", name=eta))
     if f.compute_output() < min_loss:
         return f.compute_output(), eta
     return min_loss, best_eta
