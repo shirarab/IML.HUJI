@@ -23,12 +23,18 @@ class NeuralNetwork(BaseEstimator, BaseModule):
 
     pre_activations_:
     """
+
     def __init__(self,
                  modules: List[FullyConnectedLayer],
                  loss_fn: BaseModule,
                  solver: Union[StochasticGradientDescent, GradientDescent]):
         super().__init__()
-        raise NotImplementedError()
+
+        self.modules_ = modules
+        self.loss_fn_ = loss_fn
+        self.solver_ = solver
+        self.pre_activations_ = None
+        self.post_activations_ = None
 
     # region BaseEstimator implementations
     def _fit(self, X: np.ndarray, y: np.ndarray) -> NoReturn:
@@ -43,7 +49,7 @@ class NeuralNetwork(BaseEstimator, BaseModule):
         y : ndarray of shape (n_samples, )
             Responses of input data to fit to
         """
-        raise NotImplementedError()
+        self.solver_.fit(self, X, y)
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -59,7 +65,7 @@ class NeuralNetwork(BaseEstimator, BaseModule):
         responses : ndarray of shape (n_samples, )
             Predicted labels of given samples
         """
-        raise NotImplementedError()
+        return np.argmax(self.compute_prediction(X), axis=1)
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """
@@ -78,7 +84,8 @@ class NeuralNetwork(BaseEstimator, BaseModule):
         loss : float
             Performance under specified loss function
         """
-        raise NotImplementedError()
+        return self.loss_fn_.compute_output(X=self.compute_prediction(X), y=y)
+
     # endregion
 
     # region BaseModule implementations
@@ -101,14 +108,15 @@ class NeuralNetwork(BaseEstimator, BaseModule):
 
         Notes
         -----
-        Function stores all intermediate values in the `self.pre_activations_` and `self.post_activations_` arrays
+        Function stores all intermediate values in the `self.pre_activations_` and
+        `self.post_activations_` arrays
         """
-        raise NotImplementedError()
+        return self.loss_fn_.compute_output(X=self.compute_prediction(X), y=y)
 
     def compute_prediction(self, X: np.ndarray):
         """
-        Compute network output (forward pass) with respect to modules' weights given input samples, except pass
-        through specified loss function
+        Compute network output (forward pass) with respect to modules' weights given input
+        samples, except pass through specified loss function
 
         Parameters
         ----------
@@ -120,7 +128,18 @@ class NeuralNetwork(BaseEstimator, BaseModule):
         output : ndarray of shape (n_samples, n_classes)
             Network's output values prior to the call of the loss function
         """
-        raise NotImplementedError()
+
+        output = X.copy()
+        self.pre_activations_ = []
+        self.post_activations_ = [output]
+
+        for module in self.modules_:
+            if module.include_intercept_:
+                output = np.insert(output, 0, 1, axis=1)
+            self.pre_activations_.append(output @ module.weights)
+            output = module.compute_output(X=output)
+            self.post_activations_.append(output)
+        return output
 
     def compute_jacobian(self, X: np.ndarray, y: np.ndarray, **kwargs) -> np.ndarray:
         """
@@ -172,6 +191,7 @@ class NeuralNetwork(BaseEstimator, BaseModule):
         non_flat_weights = NeuralNetwork._unflatten_parameters(weights, self.modules_)
         for module, weights in zip(self.modules_, non_flat_weights):
             module.weights = weights
+
     # endregion
 
     # region Internal methods

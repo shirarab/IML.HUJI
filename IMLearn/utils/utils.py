@@ -1,6 +1,7 @@
 from typing import Tuple
 import numpy as np
 import pandas as pd
+import sklearn.metrics
 
 
 def split_train_test(X: pd.DataFrame, y: pd.Series, train_proportion: float = .75) \
@@ -37,7 +38,7 @@ def split_train_test(X: pd.DataFrame, y: pd.Series, train_proportion: float = .7
     n_samples = X.shape[0]
     indices = np.random.permutation(n_samples)
     train_i = indices[:int(np.ceil(train_proportion * n_samples))],
-    test_i = indices[int(np.floor((1-train_proportion) * n_samples)):]
+    test_i = indices[int(np.floor((1 - train_proportion) * n_samples)):]
     train_x = X.T[X.axes[0][train_i]].T
     train_y = y.T[y.axes[0][train_i]].T
     test_x = X.T[X.axes[0][test_i]].T
@@ -60,7 +61,19 @@ def confusion_matrix(a: np.ndarray, b: np.ndarray) -> np.ndarray:
     Returns
     -------
     confusion_matrix: ndarray of shape (a_unique_values, b_unique_values)
-        A confusion matrix where the value of the i,j index shows the number of times value `i` was found in vector `a`
-        while value `j` vas found in vector `b`
+        A confusion matrix where the value of the i,j index shows the number of times value `i`
+        was found in vector `a` while value `j` vas found in vector `b`
     """
-    raise NotImplementedError()
+
+    a_unique, a_counts = np.unique(a, return_counts=True)
+    b_unique, b_counts = np.unique(b, return_counts=True)
+    conf_matrix = np.zeros((len(a_unique), len(b_unique)))
+
+    for i, ac in enumerate(a_counts):
+        for j, bc in enumerate(b_counts):
+            if ac == bc:
+                conf_matrix[i, j] = ac
+
+    return conf_matrix
+    # from sklearn.metrics import confusion_matrix
+    # confusion_matrix(a, b)
