@@ -122,8 +122,8 @@ def fit_nn_hidden_layers(n_features, n_classes, lims, train_X, train_y, test_X, 
 
 
 def convergence_rate(nn, weights, lims, train_X, train_y, title, neurons_num, values, grads):
-    animate_decision_boundary(nn, weights[::100], lims, train_X, train_y, title,
-                              f"./../figures/{neurons_num}neurons_animation.gif")
+    # animate_decision_boundary(nn, weights[::100], lims, train_X, train_y, title,
+    #                           f"./../figures/{neurons_num}neurons_animation.gif")
 
     fig = make_subplots()
     fig.update_layout(dict(title=f"Convergence Rate ({neurons_num} neurons)",
@@ -159,8 +159,8 @@ if __name__ == '__main__':
     go.Figure(data=[go.Scatter(x=train_X[:, 0], y=train_X[:, 1], mode='markers',
                                marker=dict(color=train_y, colorscale=custom, line=dict(color="black", width=1)))],
               layout=go.Layout(title=r"$\text{Train Data}$", xaxis=dict(title=r"$x_1$"), yaxis=dict(title=r"$x_2$"),
-                               width=400, height=400)) \
-        .write_html(f"../figures/nonlinear_data.html")
+                               width=400, height=400)) #\
+        # .write_html(f"../figures/nonlinear_data.html")
     # .write_image(f"../figures/nonlinear_data.png")
 
     # ---------------------------------------------------------------------------------------------#

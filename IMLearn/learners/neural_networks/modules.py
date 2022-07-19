@@ -58,7 +58,6 @@ class FullyConnectedLayer(BaseModule):
         if not include_intercept:
             self.weights_ = np.random.normal(0, 1 / input_dim, (input_dim, output_dim))
         else:
-            # todo should i change self.input_dim_??
             self.weights_ = np.random.normal(0, 1 / (input_dim + 1), (input_dim + 1, output_dim))
 
     def compute_output(self, X: np.ndarray, **kwargs) -> np.ndarray:
@@ -80,7 +79,7 @@ class FullyConnectedLayer(BaseModule):
         new_x = X.copy()
         if self.include_intercept_:
             new_x = np.insert(new_x, 0, 1, axis=1)
-        return self.activation_.compute_output(X=new_x @ self.weights_, **kwargs)
+        return self.activation_.compute_output(X=new_x @ self.weights, **kwargs)
 
     def compute_jacobian(self, X: np.ndarray, **kwargs) -> np.ndarray:
         """
@@ -100,8 +99,9 @@ class FullyConnectedLayer(BaseModule):
         new_x = X.copy()
         if self.include_intercept_:
             new_x = np.insert(new_x, 0, 1, axis=1)
-        jacobian = self.activation_.compute_jacobian(X=new_x @ self.weights_, **kwargs)
-        return diag_compute_jacobian_helper(new_x, jacobian)
+        jacobian = self.activation_.compute_jacobian(X=new_x @ self.weights, **kwargs)
+        return np.einsum('ki,kj->kij', new_x, jacobian)
+        # return diag_compute_jacobian_helper(new_x, jacobian)
 
 
 class ReLU(BaseModule):
@@ -141,7 +141,8 @@ class ReLU(BaseModule):
         """
         n_samples, input_dim = X.shape
         derivative = np.where(X > 0, 1, 0)
-        return diag_compute_jacobian_helper(derivative, np.identity(input_dim))
+        return np.einsum('ij,kj->ikj', derivative, np.identity(input_dim))
+        # return diag_compute_jacobian_helper(derivative, np.identity(input_dim))
 
 
 class CrossEntropyLoss(BaseModule):
@@ -168,6 +169,8 @@ class CrossEntropyLoss(BaseModule):
         output: ndarray of shape (n_samples,)
             cross-entropy loss value of given X and y
         """
+        # n_samples = X.shape[0]
+        # return np.array([cross_entropy(y[i], softmax(X[i])) for i in range(n_samples)])
         return cross_entropy(y, softmax(X))
 
     def compute_jacobian(self, X: np.ndarray, y: np.ndarray, **kwargs) -> np.ndarray:
@@ -187,25 +190,21 @@ class CrossEntropyLoss(BaseModule):
         output: ndarray of shape (n_samples, input_dim)
             derivative of cross-entropy loss with respect to given input
         """
-        raise NotImplementedError()
-        # my_softmax = softmax(X)
-        # return my_softmax
+
+        a = np.zeros(X.shape, dtype=int)
+        a[:, y] = 1
+        return softmax(X) - a
 
 
 class Identity(BaseModule):
-    def compute_output(self, X: np.ndarray, y: np.ndarray, **kwargs) -> np.ndarray:
+    def compute_output(self, X: np.ndarray, **kwargs) -> np.ndarray:
         return X
 
-    def compute_jacobian(self, X: np.ndarray, y: np.ndarray, **kwargs) -> np.ndarray:
+    def compute_jacobian(self, X: np.ndarray, **kwargs) -> np.ndarray:
         n_samples, input_dim = X.shape
         derivative = np.ones((n_samples, input_dim))
-        return diag_compute_jacobian_helper(derivative, np.identity(input_dim))
+        return np.einsum('ij,kj->ikj', derivative, np.identity(input_dim))
+        # return diag_compute_jacobian_helper(derivative, np.identity(input_dim))
 
-
-def diag_compute_jacobian_helper(out, optimize):
-    return np.einsum('ki,kj->kij', out, optimize)
-
-    # jacobian = []
-    # for x in derivative:
-    #     jacobian.append(np.diag(x))
-    # return np.array(jacobian)
+# def diag_compute_jacobian_helper(out, optimize):
+#     return np.einsum('ki,kj->kij', out, optimize)

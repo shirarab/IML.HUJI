@@ -49,6 +49,7 @@ class NeuralNetwork(BaseEstimator, BaseModule):
         y : ndarray of shape (n_samples, )
             Responses of input data to fit to
         """
+
         self.solver_.fit(self, X, y)
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
@@ -65,6 +66,7 @@ class NeuralNetwork(BaseEstimator, BaseModule):
         responses : ndarray of shape (n_samples, )
             Predicted labels of given samples
         """
+
         return np.argmax(self.compute_prediction(X), axis=1)
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
@@ -84,6 +86,7 @@ class NeuralNetwork(BaseEstimator, BaseModule):
         loss : float
             Performance under specified loss function
         """
+
         return self.loss_fn_.compute_output(X=self.compute_prediction(X), y=y)
 
     # endregion
@@ -111,7 +114,8 @@ class NeuralNetwork(BaseEstimator, BaseModule):
         Function stores all intermediate values in the `self.pre_activations_` and
         `self.post_activations_` arrays
         """
-        return self.loss_fn_.compute_output(X=self.compute_prediction(X), y=y)
+
+        return self.loss_fn_.compute_output(X=self.compute_prediction(X), y=y, **kwargs)
 
     def compute_prediction(self, X: np.ndarray):
         """
@@ -134,9 +138,10 @@ class NeuralNetwork(BaseEstimator, BaseModule):
         self.post_activations_ = [output]
 
         for module in self.modules_:
+            o_t = output.copy()
             if module.include_intercept_:
-                output = np.insert(output, 0, 1, axis=1)
-            self.pre_activations_.append(output @ module.weights)
+                o_t = np.insert(o_t, 0, 1, axis=1)
+            self.pre_activations_.append(o_t @ module.weights)
             output = module.compute_output(X=output)
             self.post_activations_.append(output)
         return output
@@ -162,7 +167,39 @@ class NeuralNetwork(BaseEstimator, BaseModule):
         Function depends on values calculated in forward pass and stored in
         `self.pre_activations_` and `self.post_activations_`
         """
-        raise NotImplementedError()
+
+        self.compute_output(X=X, y=y, **kwargs)
+
+        j = 1
+        pre_a_len = len(self.pre_activations_)
+        post_a_len = len(self.post_activations_)
+        T = len(self.modules_) - j
+        pre_a = self.pre_activations_[pre_a_len - j]
+        post_a = self.post_activations_[post_a_len - j]
+        delta_t = self.loss_fn_.compute_jacobian(X=post_a, y=y, **kwargs)
+        jac_t = self.modules_[T].activation_.compute_jacobian(X=pre_a, **kwargs)
+        delta_t = np.einsum('kij,kj->ki', jac_t, delta_t)
+
+        N = []
+
+        j += 1
+        for module in self.modules_[::-1]:
+            pre_a = self.pre_activations_[pre_a_len - j]
+            post_a = self.post_activations_[post_a_len - j]
+            if module.include_intercept_:
+                post_a = np.insert(post_a, 0, 1, axis=1)
+            n_to_add = np.einsum('ij,ik->ijk', delta_t, post_a)
+            N.append(np.mean(n_to_add, axis=0).T)
+
+            if j > T + 1:
+                break
+            jac_t = module.activation_.compute_jacobian(X=pre_a)
+            weights = module.weights if not module.include_intercept_ else module.weights[1:]
+            weights_delta_t = np.einsum('ij,kj->ki', weights, delta_t)
+            delta_t = np.einsum('kij,kj->ki', jac_t, weights_delta_t)
+            j += 1
+
+        return self._flatten_parameters(N[::-1])
 
     @property
     def weights(self) -> np.ndarray:
