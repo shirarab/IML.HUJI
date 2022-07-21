@@ -107,12 +107,13 @@ def get_gd_state_recorder_callback() -> Tuple[Callable[[], None], List[np.ndarra
 
 def fit_nn_hidden_layers(n_features, n_classes, lims, train_X, train_y, test_X, test_y, neurons_num, gd):
     """question 1+3+4"""
+    include_intercept = False if neurons_num == 16 else True
     modules = [
-        FullyConnectedLayer(input_dim=n_features, output_dim=neurons_num, activation=ReLU()),
-        FullyConnectedLayer(input_dim=neurons_num, output_dim=neurons_num, activation=ReLU()),
-        FullyConnectedLayer(input_dim=neurons_num, output_dim=n_classes)
+        FullyConnectedLayer(n_features, neurons_num, ReLU(), include_intercept=include_intercept),
+        FullyConnectedLayer(neurons_num, neurons_num, ReLU(), include_intercept=include_intercept),
+        FullyConnectedLayer(neurons_num, n_classes)
     ]
-    nn = NeuralNetwork(modules=modules, loss_fn=CrossEntropyLoss(), solver=gd)
+    nn = NeuralNetwork(modules, CrossEntropyLoss(), gd)
     nn.fit(train_X, train_y)
 
     title = f"Network with Hidden Layers ({neurons_num} neurons)"
@@ -132,6 +133,7 @@ def convergence_rate(nn, weights, lims, train_X, train_y, title, neurons_num, va
     grads_norm = [np.linalg.norm(g) for g in grads]
     fig.add_trace(go.Scatter(x=x, y=values, mode="markers", name="values"))
     fig.add_trace(go.Scatter(x=x, y=grads_norm, mode="markers", name="grads"))
+    fig.show()
 
 
 def fit_nn_no_hidden_layers(n_features, n_classes, lims, train_X, train_y, test_X, test_y):

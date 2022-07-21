@@ -114,15 +114,15 @@ class StochasticGradientDescent:
         """
 
         t = 0
-        while t < self.max_iter_:
+        delta = np.linalg.norm(f.weights)
+
+        while t < self.max_iter_ and delta > self.tol_:
             prev_w = f.weights
             batch_indices = np.random.choice(a=X.shape[0], size=self.batch_size_, replace=False)
             val, jac, eta = self._partial_fit(f, X[batch_indices], y[batch_indices], t)
             delta = np.linalg.norm(f.weights - prev_w)
             self.callback_(solver=self, weights=f.weights, val=val, grad=jac,
                            t=t, eta=eta, delta=delta, batch_indices=batch_indices)
-            if delta <= self.tol_:
-                break
             t += 1
         return f.weights
 
@@ -155,6 +155,7 @@ class StochasticGradientDescent:
         eta: float
             learning rate used at current iteration
         """
+
         val = f.compute_output(X=X, y=y)
         jac = f.compute_jacobian(X=X, y=y)
         eta = self.learning_rate_.lr_step(t=t)

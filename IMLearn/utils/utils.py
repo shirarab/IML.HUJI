@@ -69,11 +69,8 @@ def confusion_matrix(a: np.ndarray, b: np.ndarray) -> np.ndarray:
     b_unique, b_counts = np.unique(b, return_counts=True)
     conf_matrix = np.zeros((len(a_unique), len(b_unique)))
 
-    for i, ac in enumerate(a_counts):
-        for j, bc in enumerate(b_counts):
-            if ac == bc:
-                conf_matrix[i, j] = ac
+    for i, au in enumerate(a_unique):
+        for j, bu in enumerate(b_unique):
+            conf_matrix[au, bu] = a_counts[i]
 
     return conf_matrix
-    # from sklearn.metrics import confusion_matrix
-    # confusion_matrix(a, b)
